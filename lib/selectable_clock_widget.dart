@@ -58,8 +58,7 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
   late AnimationController _pulseController;
   late AnimationController _sparkController;
   late Animation<double> _sparkAnimation;
-  List<SparkParticle> _sparks = [];
-  Color? _sparkColor;
+  final List<SparkParticle> _sparks = [];
   
   
   
@@ -1018,8 +1017,6 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
 
 
   void _triggerSparkAnimation(Color color) {
-    print('🎆 Triggering spark animation with color: $color');
-    _sparkColor = color;
     _sparks.clear();
     
     // Generate sparks around the circle
@@ -1038,10 +1035,8 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
       ));
     }
     
-    print('✨ Created ${_sparks.length} spark particles');
     _sparkController.reset();
     _sparkController.forward();
-    print('🎬 Animation started');
   }
 
 

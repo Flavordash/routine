@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart' as widgets;
 import 'package:rive/rive.dart';
 import 'selectable_clock_widget.dart';
 
@@ -526,9 +527,9 @@ class _TutorialDialogState extends State<TutorialDialog> {
 
   final List<TutorialSlide> slides = [
     TutorialSlide(
-      title: 'Welcome to Routine',
+      title: 'Welcome to Routine 24',
       content: 'Plan your day with our interactive 24-hour clock interface.',
-      icon: Icons.schedule,
+      imagePath: 'assets/animations/Logo.png',
     ),
     TutorialSlide(
       title: 'Creating Time Slots',
@@ -611,7 +612,7 @@ class _TutorialDialogState extends State<TutorialDialog> {
                         ? Theme.of(context).colorScheme.primary
                         : Theme.of(
                             context,
-                          ).colorScheme.primary.withOpacity(0.3),
+                          ).colorScheme.primary.withValues(alpha: 0.3),
                   ),
                 );
               }),
@@ -623,11 +624,17 @@ class _TutorialDialogState extends State<TutorialDialog> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
-                    currentSlideData.icon,
-                    size: 80,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
+                  currentSlideData.imagePath != null
+                      ? widgets.Image.asset(
+                          currentSlideData.imagePath!,
+                          width: 80,
+                          height: 80,
+                        )
+                      : Icon(
+                          currentSlideData.icon!,
+                          size: 80,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
                   const SizedBox(height: 30),
                   Text(
                     currentSlideData.title,
@@ -673,7 +680,7 @@ class _TutorialDialogState extends State<TutorialDialog> {
                 color: Theme.of(context).colorScheme.surface,
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
-                  color: Theme.of(context).colorScheme.outline.withOpacity(0.5),
+                  color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.5),
                 ),
               ),
               child: Column(
@@ -723,11 +730,13 @@ class _TutorialDialogState extends State<TutorialDialog> {
 class TutorialSlide {
   final String title;
   final String content;
-  final IconData icon;
+  final IconData? icon;
+  final String? imagePath;
 
   TutorialSlide({
     required this.title,
     required this.content,
-    required this.icon,
+    this.icon,
+    this.imagePath,
   });
 }
