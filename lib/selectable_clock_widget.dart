@@ -61,10 +61,8 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
   List<SparkParticle> _sparks = [];
   Color? _sparkColor;
   
-  // Background effect controllers
-  StateMachineController? _backgroundEffectController;
-  SMITrigger? _bigStarTrigger;
-  SMITrigger? _starTrigger;
+  
+  
   
   // Notification settings
   FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
@@ -75,6 +73,8 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
   @override
   void initState() {
     super.initState();
+    
+    // Initialize main animations first
     _highlightController = AnimationController(
       duration: const Duration(milliseconds: 400),
       vsync: this,
@@ -103,71 +103,13 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
 
 
   Widget _buildBackgroundAnimation() {
-    return Stack(
-      children: [
-        // Background effects (dark theme only)
-        if (widget.isDarkMode)
-          RiveAnimation.asset(
-            'assets/animations/mpl_dark.riv',
-            fit: BoxFit.contain,
-            key: const ValueKey('dark_effects'),
-            onInit: (artboard) {
-              debugPrint('🌟 Dark effects Rive onInit called');
-              
-              // Try to find state machine for background effects
-              StateMachineController? controller = StateMachineController.fromArtboard(
-                artboard,
-                'State Machine 1',
-              ) ?? StateMachineController.fromArtboard(artboard, 'State Machine');
-              
-              if (controller != null) {
-                artboard.addController(controller);
-                _backgroundEffectController = controller;
-                debugPrint('✅ Background effects controller initialized');
-                
-                // Debug: List all available inputs
-                debugPrint('📋 Background effects inputs:');
-                for (var input in controller.inputs) {
-                  debugPrint('  - ${input.name} (${input.runtimeType})');
-                }
-                
-                // Find triggers
-                _bigStarTrigger = controller.findSMI('big star') as SMITrigger? ??
-                                 controller.findSMI('bigStar') as SMITrigger? ??
-                                 controller.findSMI('bigstar') as SMITrigger? ??
-                                 controller.findSMI('big_star') as SMITrigger?;
-                                 
-                _starTrigger = controller.findSMI('star') as SMITrigger? ??
-                              controller.findSMI('small star') as SMITrigger? ??
-                              controller.findSMI('smallStar') as SMITrigger? ??
-                              controller.findSMI('small_star') as SMITrigger?;
-                
-                if (_bigStarTrigger != null) {
-                  debugPrint('✅ Found big star trigger: ${_bigStarTrigger!.name}');
-                } else {
-                  debugPrint('❌ Big star trigger not found');
-                }
-                
-                if (_starTrigger != null) {
-                  debugPrint('✅ Found star trigger: ${_starTrigger!.name}');
-                } else {
-                  debugPrint('❌ Star trigger not found');
-                }
-              } else {
-                debugPrint('❌ No state machine found in mpl_dark.riv');
-              }
-            },
-          ),
-        
-        // Main circle background
-        RiveAnimation.asset(
-          widget.isDarkMode 
-              ? 'assets/animations/circle_board.riv'
-              : 'assets/animations/circle light.riv',
-          fit: BoxFit.contain,
-          key: ValueKey(widget.isDarkMode ? 'dark_bg' : 'light_bg'),
-        ),
-      ],
+    // Always show the appropriate background circle
+    return RiveAnimation.asset(
+      widget.isDarkMode 
+          ? 'assets/animations/circle_board.riv'
+          : 'assets/animations/circle light.riv',
+      fit: BoxFit.contain,
+      key: ValueKey(widget.isDarkMode ? 'dark_bg' : 'light_bg'),
     );
   }
 
@@ -851,10 +793,6 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
                       timeSlots.add(newSlot);
                       // Trigger spark animation for new slots
                       _triggerSparkAnimation(selectedColor);
-                      // Trigger background effects for dark theme
-                      if (widget.isDarkMode) {
-                        _triggerBackgroundEffects();
-                      }
                     }
                     
                     // Schedule notification if enabled
@@ -1106,25 +1044,6 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
     print('🎬 Animation started');
   }
 
-  void _triggerBackgroundEffects() {
-    if (!widget.isDarkMode || _backgroundEffectController == null) {
-      return;
-    }
-    
-    print('🌟 Triggering background effects');
-    
-    // Trigger big star fade in (behind circle)
-    if (_bigStarTrigger != null) {
-      _bigStarTrigger!.fire();
-      print('✨ Big star trigger fired');
-    }
-    
-    // Trigger star fade in & out
-    if (_starTrigger != null) {
-      _starTrigger!.fire();
-      print('⭐ Star trigger fired');
-    }
-  }
 
   @override
   void dispose() {

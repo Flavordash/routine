@@ -122,108 +122,140 @@ class _MyHomePageState extends State<MyHomePage> {
   StateMachineController? _stateMachineController;
 
   Widget _buildThemeToggleButton() {
-    return GestureDetector(
-      onTap: () {
-        // Animate BEFORE changing theme for better responsiveness
-        _animateToggle();
-        // Small delay to let animation start, then change theme
-        Future.delayed(const Duration(milliseconds: 50), () {
-          widget.onThemeToggle();
-        });
-      },
-      child: Container(
-        width: 120, // Much bigger for better visibility
-        height: 80, // Match the new navbar height
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-          color: Colors
-              .transparent, // Subtle background on hover/press would be nice
-        ),
-        child: RiveAnimation.asset(
-          'assets/animations/ThemeToggle.riv',
-          fit: BoxFit.contain,
-          onInit: (artboard) {
-            debugPrint('🔄 Rive onInit called for ThemeToggle');
+    return Container(
+      width: 80, // Smaller width to match toggle size
+      height: 80, // Match navbar height
+      padding: const EdgeInsets.all(12),
+      child: GestureDetector(
+        onTap: () {
+          // Animate BEFORE changing theme for better responsiveness
+          _animateToggle();
+          // Small delay to let animation start, then change theme
+          Future.delayed(const Duration(milliseconds: 50), () {
+            widget.onThemeToggle();
+          });
+        },
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            color: Colors.transparent,
+          ),
+          child: RiveAnimation.asset(
+            'assets/animations/ThemeToggle.riv',
+            fit: BoxFit.contain,
+            onInit: (artboard) {
+              debugPrint('🔄 Rive onInit called for ThemeToggle');
 
-            // Try different state machine names
-            StateMachineController? controller =
-                StateMachineController.fromArtboard(
-                  artboard,
-                  'Light/Dark Mode Button',
-                );
-
-            if (controller == null) {
-              debugPrint(
-                '⚠️ "Light/Dark Mode Button" not found, trying alternatives...',
-              );
-              controller =
+              // Try different state machine names
+              StateMachineController? controller =
                   StateMachineController.fromArtboard(
                     artboard,
-                    'State Machine 1',
-                  ) ??
-                  StateMachineController.fromArtboard(
-                    artboard,
-                    'State Machine',
-                  ) ??
-                  StateMachineController.fromArtboard(artboard, 'Theme') ??
-                  StateMachineController.fromArtboard(artboard, 'Toggle') ??
-                  StateMachineController.fromArtboard(artboard, 'Button');
-            }
+                    'Light/Dark Mode Button',
+                  );
 
-            if (controller != null) {
-              artboard.addController(controller);
-              _stateMachineController = controller;
-              debugPrint('✅ State machine controller initialized successfully');
-
-              // Debug: List all available inputs
-              debugPrint('📋 Available inputs:');
-              for (var input in controller.inputs) {
-                debugPrint('  - ${input.name} (${input.runtimeType})');
-              }
-
-              // Set initial state
-              final boolInput =
-                  controller.findInput<bool>('isDark') ??
-                  controller.findInput<bool>('darkMode') ??
-                  controller.findInput<bool>('isLightMode') ??
-                  controller.findInput<bool>('dark') ??
-                  controller.findInput<bool>('light');
-
-              if (boolInput != null) {
-                boolInput.value = widget.isDarkMode;
+              if (controller == null) {
                 debugPrint(
-                  '✅ Boolean input "${boolInput.name}" set to: ${widget.isDarkMode}',
+                  '⚠️ "Light/Dark Mode Button" not found, trying alternatives...',
                 );
-              } else {
-                debugPrint('⚠️ No boolean input found, trying triggers...');
+                controller =
+                    StateMachineController.fromArtboard(
+                      artboard,
+                      'State Machine 1',
+                    ) ??
+                    StateMachineController.fromArtboard(
+                      artboard,
+                      'State Machine',
+                    ) ??
+                    StateMachineController.fromArtboard(artboard, 'Theme') ??
+                    StateMachineController.fromArtboard(artboard, 'Toggle') ??
+                    StateMachineController.fromArtboard(artboard, 'Button');
+              }
 
-                // Debug: List all trigger inputs to find the correct names
-                debugPrint('🔍 All trigger inputs:');
+              if (controller != null) {
+                artboard.addController(controller);
+                _stateMachineController = controller;
+                debugPrint(
+                  '✅ State machine controller initialized successfully',
+                );
+
+                // Debug: List all available inputs
+                debugPrint('📋 Available inputs:');
                 for (var input in controller.inputs) {
-                  if (input is SMITrigger) {
-                    debugPrint('  - TRIGGER: "${input.name}"');
-                  }
+                  debugPrint('  - ${input.name} (${input.runtimeType})');
                 }
 
-                _initializeTriggerInputs(controller);
-              }
-            } else {
-              debugPrint(
-                '❌ No compatible state machine found in ThemeToggle.riv',
-              );
-              debugPrint('💡 Available state machines:');
-              // Try to list available state machines
-              try {
-                final stateMachines = artboard.stateMachines;
-                for (var sm in stateMachines) {
-                  debugPrint('  - "${sm.name}"');
+                // Set initial state - try the actual input name we found
+                final boolInput =
+                    controller.findInput<bool>('Toggle_Is_Pressed') ??
+                    controller.findInput<bool>('isDark') ??
+                    controller.findInput<bool>('darkMode') ??
+                    controller.findInput<bool>('isLightMode') ??
+                    controller.findInput<bool>('dark') ??
+                    controller.findInput<bool>('light');
+
+                if (boolInput != null) {
+                  // Handle the specific "Toggle_Is_Pressed" input
+                  if (boolInput.name == 'Toggle_Is_Pressed') {
+                    // For Toggle_Is_Pressed, we need to test which value shows dark mode
+                    // Try setting it to match the current theme state
+                    boolInput.value = widget.isDarkMode;
+                    debugPrint(
+                      '✅ Toggle_Is_Pressed set to: ${boolInput.value} (isDarkMode: ${widget.isDarkMode})',
+                    );
+                  } else if (boolInput.name.toLowerCase().contains('light')) {
+                    boolInput.value =
+                        !widget.isDarkMode; // Light mode when NOT dark
+                  } else {
+                    boolInput.value =
+                        widget.isDarkMode; // Dark mode when IS dark
+                  }
+                  debugPrint(
+                    '✅ Boolean input "${boolInput.name}" set to: ${boolInput.value} (isDarkMode: ${widget.isDarkMode})',
+                  );
+                } else {
+                  debugPrint('⚠️ No boolean input found, trying triggers...');
+
+                  // Debug: List all trigger inputs to find the correct names
+                  debugPrint('🔍 All trigger inputs:');
+                  for (var input in controller.inputs) {
+                    if (input is SMITrigger) {
+                      debugPrint('  - TRIGGER: "${input.name}"');
+                    }
+                  }
+
+                  // Force correct state after short delay to ensure it takes effect
+                  Future.delayed(const Duration(milliseconds: 200), () {
+                    if (controller != null && boolInput != null) {
+                      // Double-check the boolean state in case it didn't take effect immediately
+                      if (boolInput.name == 'Toggle_Is_Pressed') {
+                        debugPrint(
+                          '🔧 Double-checking Toggle_Is_Pressed state...',
+                        );
+                        boolInput.value = widget.isDarkMode;
+                        debugPrint(
+                          '✅ Toggle_Is_Pressed re-confirmed: ${boolInput.value}',
+                        );
+                      }
+                    }
+                  });
                 }
-              } catch (e) {
-                debugPrint('  Could not list state machines: $e');
+              } else {
+                debugPrint(
+                  '❌ No compatible state machine found in ThemeToggle.riv',
+                );
+                debugPrint('💡 Available state machines:');
+                // Try to list available state machines
+                try {
+                  final stateMachines = artboard.stateMachines;
+                  for (var sm in stateMachines) {
+                    debugPrint('  - "${sm.name}"');
+                  }
+                } catch (e) {
+                  debugPrint('  Could not list state machines: $e');
+                }
               }
-            }
-          },
+            },
+          ),
         ),
       ),
     );
@@ -273,16 +305,16 @@ class _MyHomePageState extends State<MyHomePage> {
       }
     }
 
-    // Fire appropriate trigger based on current theme
-    if (widget.isDarkMode && lightTrigger != null) {
-      lightTrigger.fire();
-      debugPrint(
-        '✅ Light trigger "${lightTrigger.name}" fired (switching from dark)',
-      );
-    } else if (!widget.isDarkMode && darkTrigger != null) {
+    // Fire appropriate trigger to SHOW current theme state (not switch to it)
+    if (widget.isDarkMode && darkTrigger != null) {
       darkTrigger.fire();
       debugPrint(
-        '✅ Dark trigger "${darkTrigger.name}" fired (switching from light)',
+        '✅ Dark trigger "${darkTrigger.name}" fired (showing dark theme: moon/star)',
+      );
+    } else if (!widget.isDarkMode && lightTrigger != null) {
+      lightTrigger.fire();
+      debugPrint(
+        '✅ Light trigger "${lightTrigger.name}" fired (showing light theme: sun/cloud)',
       );
     } else if (generalTrigger != null) {
       // Use general toggle trigger if specific ones aren't found
@@ -315,10 +347,15 @@ class _MyHomePageState extends State<MyHomePage> {
         _stateMachineController!.findInput<bool>('isLightMode');
 
     if (boolInput != null) {
-      final newValue = !widget.isDarkMode;
-      boolInput.value = newValue;
+      final newValue = !widget.isDarkMode; // What we're switching TO
+      // Set the correct value based on input name
+      if (boolInput.name.toLowerCase().contains('light')) {
+        boolInput.value = newValue; // Light mode = !darkMode
+      } else {
+        boolInput.value = !newValue; // Dark mode = darkMode
+      }
       debugPrint(
-        '✅ Navbar boolean input (${boolInput.name}) toggled to: $newValue',
+        '✅ Navbar boolean input (${boolInput.name}) toggled to: ${boolInput.value} (switching to isDarkMode: ${!widget.isDarkMode})',
       );
     } else {
       debugPrint('⚠️ No boolean input found, trying triggers...');
@@ -376,13 +413,13 @@ class _MyHomePageState extends State<MyHomePage> {
       '🔍 Found triggers - light: ${lightTrigger?.name}, dark: ${darkTrigger?.name}, general: ${generalTrigger?.name}',
     );
 
-    // Fire the opposite trigger (what we want to switch TO)
+    // Fire trigger for what we're switching TO (opposite of current theme)
     if (widget.isDarkMode && lightTrigger != null) {
       lightTrigger.fire();
-      debugPrint('✅ Light trigger fired (switching from dark)');
+      debugPrint('✅ Light trigger fired (switching TO light: sun/cloud)');
     } else if (!widget.isDarkMode && darkTrigger != null) {
       darkTrigger.fire();
-      debugPrint('✅ Dark trigger fired (switching from light)');
+      debugPrint('✅ Dark trigger fired (switching TO dark: moon/star)');
     } else if (generalTrigger != null) {
       // Use general toggle trigger if specific ones aren't found
       generalTrigger.fire();
@@ -414,9 +451,14 @@ class _MyHomePageState extends State<MyHomePage> {
         _stateMachineController!.findInput<bool>('isLightMode');
 
     if (boolInput != null) {
-      boolInput.value = widget.isDarkMode;
+      // Set the correct value based on input name
+      if (boolInput.name.toLowerCase().contains('light')) {
+        boolInput.value = !widget.isDarkMode; // Light mode when NOT dark
+      } else {
+        boolInput.value = widget.isDarkMode; // Dark mode when IS dark
+      }
       debugPrint(
-        'Navbar animation state updated - isDarkMode: ${widget.isDarkMode}',
+        'Navbar animation state updated - ${boolInput.name}: ${boolInput.value} (isDarkMode: ${widget.isDarkMode})',
       );
     } else {
       // Use trigger inputs to update state
@@ -448,7 +490,10 @@ class _MyHomePageState extends State<MyHomePage> {
         ),
         actions: [
           Transform.translate(
-            offset: const Offset(16, 0), // Move 16px to the right
+            offset: const Offset(
+              0,
+              0,
+            ), // Move left by reducing offset (was 20, now 10)
             child: _buildThemeToggleButton(),
           ),
         ],
@@ -634,18 +679,18 @@ class _TutorialDialogState extends State<TutorialDialog> {
               child: Column(
                 children: [
                   Text(
-                    'Routine App',
+                    'Routine 24',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Developed with Flutter',
+                    'Developed By Kwanhoon Lee',
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                   Text(
-                    '© 2024 - Made with ❤️',
+                    '© 2025 - Made For me and YOU',
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ],
