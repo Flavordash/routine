@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart' as widgets;
 import 'package:rive/rive.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'selectable_clock_widget.dart';
+import 'services/auth_service.dart';
+import 'models/user_model.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
   runApp(const MyApp());
 }
 
@@ -122,8 +127,34 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   StateMachineController? _stateMachineController;
-  bool isProUser = false; // This would come from your subscription system
-  bool isLoggedIn = false; // This would come from your auth system
+  bool isProUser = false;
+  bool isLoggedIn = false;
+  final AuthService _authService = AuthService();
+
+  @override
+  void initState() {
+    super.initState();
+    _checkAuthState();
+  }
+
+  void _checkAuthState() {
+    final user = _authService.currentUser;
+    if (user != null) {
+      setState(() {
+        isLoggedIn = true;
+      });
+      _loadUserData();
+    }
+  }
+
+  Future<void> _loadUserData() async {
+    final userData = await _authService.getUserData();
+    if (userData != null) {
+      setState(() {
+        isProUser = userData['isPro'] ?? false;
+      });
+    }
+  }
 
   Widget _buildThemeToggleButton() {
     return Center(
@@ -760,9 +791,37 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog> {
   List<RoutineSlot> routineSlots = [
     RoutineSlot(id: '1', name: 'Default Routine', isActive: true, isPaid: false),
   ];
-  bool isProUser = false; // This would come from your subscription system
-  bool isLoggedIn = false; // This would come from your auth system
-  String userEmail = ''; // User's email when logged in
+  bool isProUser = false;
+  bool isLoggedIn = false;
+  String userEmail = '';
+  final AuthService _authService = AuthService();
+  UserModel? currentUser;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkAuthState();
+  }
+
+  void _checkAuthState() {
+    final user = _authService.currentUser;
+    if (user != null) {
+      setState(() {
+        isLoggedIn = true;
+        userEmail = user.email ?? '';
+      });
+      _loadUserData();
+    }
+  }
+
+  Future<void> _loadUserData() async {
+    final userData = await _authService.getUserData();
+    if (userData != null) {
+      setState(() {
+        isProUser = userData['isPro'] ?? false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1305,52 +1364,85 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog> {
   void _showSignInDialog() {
     final emailController = TextEditingController();
     final passwordController = TextEditingController();
+    bool isLoading = false;
     
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Sign In'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: emailController,
-              decoration: const InputDecoration(
-                labelText: 'Email',
-                border: OutlineInputBorder(),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Sign In'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: emailController,
+                decoration: const InputDecoration(
+                  labelText: 'Email',
+                  border: OutlineInputBorder(),
+                ),
+                keyboardType: TextInputType.emailAddress,
               ),
-              keyboardType: TextInputType.emailAddress,
+              const SizedBox(height: 16),
+              TextField(
+                controller: passwordController,
+                decoration: const InputDecoration(
+                  labelText: 'Password',
+                  border: OutlineInputBorder(),
+                ),
+                obscureText: true,
+              ),
+              if (isLoading) 
+                const Padding(
+                  padding: EdgeInsets.only(top: 16),
+                  child: CircularProgressIndicator(),
+                ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: isLoading ? null : () => Navigator.pop(context),
+              child: const Text('Cancel'),
             ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: passwordController,
-              decoration: const InputDecoration(
-                labelText: 'Password',
-                border: OutlineInputBorder(),
-              ),
-              obscureText: true,
+            ElevatedButton(
+              onPressed: isLoading ? null : () async {
+                setDialogState(() {
+                  isLoading = true;
+                });
+                
+                try {
+                  await _authService.signInWithEmailAndPassword(
+                    emailController.text.trim(),
+                    passwordController.text,
+                  );
+                  
+                  setState(() {
+                    isLoggedIn = true;
+                    userEmail = emailController.text.trim();
+                  });
+                  
+                  await _loadUserData();
+                  if (context.mounted) {
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Successfully signed in!')),
+                    );
+                  }
+                } catch (e) {
+                  setDialogState(() {
+                    isLoading = false;
+                  });
+                  
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Sign in failed: ${e.toString()}')),
+                    );
+                  }
+                }
+              },
+              child: const Text('Sign In'),
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              // TODO: Implement actual sign-in logic
-              setState(() {
-                isLoggedIn = true;
-                userEmail = emailController.text;
-                // Mock: Make user Pro if they sign in (for demo)
-                isProUser = true;
-              });
-              Navigator.pop(context);
-            },
-            child: const Text('Sign In'),
-          ),
-        ],
       ),
     );
   }
@@ -1359,77 +1451,132 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog> {
     final emailController = TextEditingController();
     final passwordController = TextEditingController();
     final confirmPasswordController = TextEditingController();
+    bool isLoading = false;
     
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Sign Up'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: emailController,
-              decoration: const InputDecoration(
-                labelText: 'Email',
-                border: OutlineInputBorder(),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Sign Up'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: emailController,
+                decoration: const InputDecoration(
+                  labelText: 'Email',
+                  border: OutlineInputBorder(),
+                ),
+                keyboardType: TextInputType.emailAddress,
               ),
-              keyboardType: TextInputType.emailAddress,
+              const SizedBox(height: 16),
+              TextField(
+                controller: passwordController,
+                decoration: const InputDecoration(
+                  labelText: 'Password',
+                  border: OutlineInputBorder(),
+                ),
+                obscureText: true,
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: confirmPasswordController,
+                decoration: const InputDecoration(
+                  labelText: 'Confirm Password',
+                  border: OutlineInputBorder(),
+                ),
+                obscureText: true,
+              ),
+              if (isLoading) 
+                const Padding(
+                  padding: EdgeInsets.only(top: 16),
+                  child: CircularProgressIndicator(),
+                ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: isLoading ? null : () => Navigator.pop(context),
+              child: const Text('Cancel'),
             ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: passwordController,
-              decoration: const InputDecoration(
-                labelText: 'Password',
-                border: OutlineInputBorder(),
-              ),
-              obscureText: true,
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: confirmPasswordController,
-              decoration: const InputDecoration(
-                labelText: 'Confirm Password',
-                border: OutlineInputBorder(),
-              ),
-              obscureText: true,
+            ElevatedButton(
+              onPressed: isLoading ? null : () async {
+                if (passwordController.text != confirmPasswordController.text) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Passwords do not match')),
+                  );
+                  return;
+                }
+                
+                if (passwordController.text.length < 6) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Password must be at least 6 characters')),
+                  );
+                  return;
+                }
+                
+                setDialogState(() {
+                  isLoading = true;
+                });
+                
+                try {
+                  await _authService.registerWithEmailAndPassword(
+                    emailController.text.trim(),
+                    passwordController.text,
+                  );
+                  
+                  setState(() {
+                    isLoggedIn = true;
+                    userEmail = emailController.text.trim();
+                    isProUser = false; // New users start as free
+                  });
+                  
+                  if (context.mounted) {
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Account created successfully!')),
+                    );
+                  }
+                } catch (e) {
+                  setDialogState(() {
+                    isLoading = false;
+                  });
+                  
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Registration failed: ${e.toString()}')),
+                    );
+                  }
+                }
+              },
+              child: const Text('Sign Up'),
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              if (passwordController.text == confirmPasswordController.text) {
-                // TODO: Implement actual sign-up logic
-                setState(() {
-                  isLoggedIn = true;
-                  userEmail = emailController.text;
-                  // New users start as free users
-                  isProUser = false;
-                });
-                Navigator.pop(context);
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Passwords do not match')),
-                );
-              }
-            },
-            child: const Text('Sign Up'),
-          ),
-        ],
       ),
     );
   }
 
-  void _logout() {
-    setState(() {
-      isLoggedIn = false;
-      userEmail = '';
-      isProUser = false;
-    });
+  void _logout() async {
+    try {
+      await _authService.signOut();
+      setState(() {
+        isLoggedIn = false;
+        userEmail = '';
+        isProUser = false;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Successfully signed out')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Sign out failed: ${e.toString()}')),
+        );
+      }
+    }
   }
 }
 
