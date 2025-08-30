@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
-import 'package:rive/rive.dart';
+import 'package:rive/rive.dart' hide LinearGradient;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 
@@ -11,6 +11,7 @@ class TimeSlot {
   final int endHour;
   final int endMinute;
   final String title;
+  final String description;
   final Color color;
   final bool notificationEnabled;
 
@@ -21,6 +22,7 @@ class TimeSlot {
     required this.endHour,
     this.endMinute = 0,
     required this.title,
+    this.description = '',
     required this.color,
     this.notificationEnabled = true,
   });
@@ -40,9 +42,16 @@ const List<Color> availableColors = [
 ];
 
 class SelectableClockWidget extends StatefulWidget {
-  const SelectableClockWidget({super.key, required this.isDarkMode});
+  const SelectableClockWidget({
+    super.key, 
+    required this.isDarkMode,
+    this.onBackgroundTap,
+    this.isProUser = false,
+  });
 
   final bool isDarkMode;
+  final VoidCallback? onBackgroundTap;
+  final bool isProUser;
 
   @override
   State<SelectableClockWidget> createState() => _SelectableClockWidgetState();
@@ -162,20 +171,32 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
     await flutterLocalNotificationsPlugin.cancel(slotId.hashCode);
   }
 
+  void _handleBackgroundTap() {
+    // Clear selection if there's an active selection
+    if (startHour != null || endHour != null) {
+      _clearSelection();
+    }
+    widget.onBackgroundTap?.call();
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
+    return GestureDetector(
+      onTap: _handleBackgroundTap,
+      behavior: HitTestBehavior.translucent,
+      child: Column(
+        children: [
         // Clock Circle
         Center(
           child: GestureDetector(
+            behavior: HitTestBehavior.opaque, // This prevents background tap
             onTapDown: _handleTap,
             onPanStart: _handlePanStart,
             onPanUpdate: _handlePanUpdate,
             onPanEnd: _handlePanEnd,
             child: SizedBox(
-              width: 360, // Increased from 320 to 360 (12.5% bigger)
-              height: 360, // Increased from 320 to 360 (12.5% bigger)
+              width: 300, // Reduced from 360 to 300
+              height: 300, // Reduced from 360 to 300
               child: Stack(
                 children: [
                   // Background circle animation (always show)
@@ -184,8 +205,8 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
                   CustomPaint(
                     painter: TimeSlotsPainter(timeSlots: timeSlots),
                     size: const Size(
-                      360,
-                      360,
+                      300,
+                      300,
                     ), // Updated to match new circle size
                   ),
                   // Overlay for current selection
@@ -204,8 +225,8 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
                           selectionColor: Theme.of(context).colorScheme.primary,
                         ),
                         size: const Size(
-                          360,
-                          360,
+                          300,
+                          300,
                         ), // Updated to match new circle size
                       );
                     },
@@ -219,7 +240,7 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
                           sparks: _sparks,
                           progress: _sparkAnimation.value,
                         ),
-                        size: const Size(360, 360),
+                        size: const Size(300, 300),
                       );
                     },
                   ),
@@ -295,14 +316,19 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
               ),
             ),
           ),
-      ],
+          
+          // Ad Banner / Pro Status
+          const SizedBox(height: 20),
+          _buildBanner(),
+        ],
+      ),
     );
   }
 
   // Hover functionality removed - not needed for mobile touch interface
 
   void _handleTap(TapDownDetails details) {
-    const center = Offset(180, 180); // Updated center point (half of 360)
+    const center = Offset(150, 150); // Updated center point (half of 300)
     final tappedHour = _getHourFromPosition(details.localPosition, center);
 
     // Check if tapping on an existing time slot - do nothing (use cards to edit)
@@ -401,6 +427,9 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
   void _showCreateTimeSlotModal([TimeSlot? existingSlot]) {
     final titleController = TextEditingController(
       text: existingSlot?.title ?? '',
+    );
+    final descriptionController = TextEditingController(
+      text: existingSlot?.description ?? '',
     );
     Color selectedColor = existingSlot?.color ?? availableColors[0];
     bool notificationEnabled =
@@ -523,6 +552,54 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
                     ),
                     const SizedBox(height: 20),
 
+                    // Description Input
+                    Text(
+                      'Description of this time',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: descriptionController,
+                      maxLines: 1, // Restrict to one line
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
+                      decoration: InputDecoration(
+                        hintText: 'e.g., Morning workout routine, Team meeting...',
+                        hintStyle: TextStyle(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withValues(alpha: 0.5),
+                        ),
+                        filled: true,
+                        fillColor: Theme.of(context).colorScheme.surface,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(
+                            color: Theme.of(context).colorScheme.onSurface,
+                          ),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(
+                            color: Theme.of(context).colorScheme.onSurface,
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(
+                            color: Theme.of(context).colorScheme.onSurface,
+                            width: 2,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+
                     // Time Adjustment Section
                     Text(
                       'Adjust time:',
@@ -581,7 +658,7 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
                                     (index) => DropdownMenuItem(
                                       value: index,
                                       child: Text(
-                                        '${index.toString().padLeft(2, '0')}h',
+                                        index.toString().padLeft(2, '0'),
                                         style: TextStyle(
                                           color: Theme.of(
                                             context,
@@ -703,7 +780,7 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
                                     (index) => DropdownMenuItem(
                                       value: index,
                                       child: Text(
-                                        '${index.toString().padLeft(2, '0')}h',
+                                        index.toString().padLeft(2, '0'),
                                         style: TextStyle(
                                           color: Theme.of(
                                             context,
@@ -912,6 +989,7 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
                       endHour: selectedEndHour,
                       endMinute: selectedEndMinute,
                       title: titleController.text.trim(),
+                      description: descriptionController.text.trim(),
                       color: selectedColor,
                       notificationEnabled: notificationEnabled,
                     );
@@ -994,6 +1072,7 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
                             endHour: slot.endHour,
                             endMinute: slot.endMinute,
                             title: slot.title,
+                            description: slot.description,
                             color: slot.color,
                             notificationEnabled: !slot.notificationEnabled,
                           );
@@ -1021,6 +1100,22 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
                   ],
                 ),
                 const SizedBox(height: 8),
+                // Description (if not empty)
+                if (slot.description.isNotEmpty) ...[
+                  Text(
+                    slot.description,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withValues(alpha: 0.6),
+                      fontStyle: FontStyle.italic,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                ],
                 Text(
                   '${_formatTimeWithMinutes(slot.startHour, slot.startMinute)} - ${_formatTimeWithMinutes(slot.endHour, slot.endMinute)}',
                   style: TextStyle(
@@ -1062,9 +1157,9 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
 
   void _handlePanStart(DragStartDetails details) {
     const center = Offset(
-      180,
-      180,
-    ); // Updated center point (half of 360) // Half of the size
+      150,
+      150,
+    ); // Updated center point (half of 300) // Half of the size
     final hour = _getHourFromPosition(details.localPosition, center);
 
     // Don't start dragging if starting on an existing time slot
@@ -1082,7 +1177,7 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
   }
 
   void _handlePanUpdate(DragUpdateDetails details) {
-    const center = Offset(180, 180); // Updated center point (half of 360)
+    const center = Offset(150, 150); // Updated center point (half of 300)
     final hour = _getHourFromPosition(details.localPosition, center);
 
     setState(() {
@@ -1168,8 +1263,8 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
     _sparks.clear();
 
     // Generate sparks around the circle
-    const center = Offset(180, 180);
-    const radius = 140;
+    const center = Offset(150, 150);
+    const radius = 120;
 
     for (int i = 0; i < 12; i++) {
       final angle = (i * 30) * math.pi / 180; // Every 30 degrees
@@ -1195,6 +1290,127 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
     _pulseController.dispose();
     _sparkController.dispose();
     super.dispose();
+  }
+
+  Widget _buildBanner() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: widget.isProUser 
+                ? [Colors.amber.shade300, Colors.amber.shade600]
+                : [Colors.blue.shade300, Colors.blue.shade600],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: (widget.isProUser ? Colors.amber : Colors.blue).withValues(alpha: 0.3),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: widget.isProUser ? _buildProBanner() : _buildAdBanner(),
+      ),
+    );
+  }
+
+  Widget _buildProBanner() {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.2),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: const Icon(
+            Icons.star,
+            color: Colors.white,
+            size: 24,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'PRO MEMBER',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                'Thanks for supporting Routine 24! Enjoy unlimited slots and ad-free experience.',
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.9),
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAdBanner() {
+    return Column(
+      children: [
+        Container(
+          width: double.infinity,
+          height: 60,
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.3),
+              width: 1,
+            ),
+          ),
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.video_library_outlined,
+                  color: Colors.white.withValues(alpha: 0.7),
+                  size: 24,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Advertisement Space',
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.7),
+                    fontSize: 10,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Upgrade to Pro for \$6.99/year - No ads, unlimited slots!',
+          style: TextStyle(
+            color: Colors.white.withValues(alpha: 0.8),
+            fontSize: 11,
+            fontStyle: FontStyle.italic,
+          ),
+          textAlign: TextAlign.center,
+        ),
+      ],
+    );
   }
 }
 

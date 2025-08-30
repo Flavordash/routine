@@ -8,7 +8,8 @@
       "Bash(flutter:*)",
       "Bash(rg:*)",
       "mcp__ide__getDiagnostics",
-      "Bash(adb:*)"
+      "Bash(adb:*)",
+      "Bash(open ios/Runner.xcworkspace)"
     ],
     "deny": [],
     "ask": []
