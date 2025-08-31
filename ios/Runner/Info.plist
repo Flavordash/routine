@@ -45,5 +45,26 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.dashpill.routine.googlesignin</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.422262636347-3kn2auk0167cmt8unvabcihgnoso2bc5</string>
+				<string>com.dashpill.routine</string>
+			</array>
+		</dict>
+	</array>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>fbapi</string>
+		<string>fb-messenger-share-api</string>
+		<string>fbauth2</string>
+		<string>fbshareextension</string>
+	</array>
+	<key>GIDClientID</key>
+	<string>422262636347-3kn2auk0167cmt8unvabcihgnoso2bc5.apps.googleusercontent.com</string>
 </dict>
 </plist>

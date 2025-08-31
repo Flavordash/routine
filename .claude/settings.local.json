@@ -9,7 +9,11 @@
       "Bash(rg:*)",
       "mcp__ide__getDiagnostics",
       "Bash(adb:*)",
-      "Bash(open ios/Runner.xcworkspace)"
+      "Bash(open ios/Runner.xcworkspace)",
+      "Bash(pod repo update:*)",
+      "Bash(pod install:*)",
+      "Bash(pod update:*)",
+      "Bash(grep:*)"
     ],
     "deny": [],
     "ask": []

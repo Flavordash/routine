@@ -2,13 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart' as widgets;
 import 'package:rive/rive.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:video_player/video_player.dart';
 import 'selectable_clock_widget.dart';
 import 'services/auth_service.dart';
+import 'services/routine_slot_service.dart';
 import 'models/user_model.dart';
+import 'models/routine_slot_model.dart';
+import 'firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   runApp(const MyApp());
 }
 
@@ -130,11 +137,15 @@ class _MyHomePageState extends State<MyHomePage> {
   bool isProUser = false;
   bool isLoggedIn = false;
   final AuthService _authService = AuthService();
+  final RoutineSlotService _routineSlotService = RoutineSlotService();
+  List<RoutineSlot> routineSlots = [];
+  RoutineSlot? activeSlot;
 
   @override
   void initState() {
     super.initState();
     _checkAuthState();
+    _loadRoutineSlots();
   }
 
   void _checkAuthState() {
@@ -153,6 +164,40 @@ class _MyHomePageState extends State<MyHomePage> {
       setState(() {
         isProUser = userData['isPro'] ?? false;
       });
+    }
+  }
+
+  Future<void> _loadRoutineSlots() async {
+    try {
+      final slots = await _routineSlotService.getRoutineSlots();
+      setState(() {
+        routineSlots = slots;
+        activeSlot = _routineSlotService.getActiveSlot(slots);
+      });
+    } catch (error) {
+      print('Error loading routine slots: $error');
+    }
+  }
+
+  Future<void> _saveRoutineSlots() async {
+    try {
+      await _routineSlotService.saveRoutineSlots(routineSlots);
+    } catch (error) {
+      print('Error saving routine slots: $error');
+    }
+  }
+
+  void _onTimeSlotsChanged(List<RoutineTimeSlot> timeSlots) {
+    if (activeSlot != null) {
+      setState(() {
+        routineSlots = _routineSlotService.updateTimeSlots(
+          routineSlots, 
+          activeSlot!.id, 
+          timeSlots
+        );
+        activeSlot = _routineSlotService.getActiveSlot(routineSlots);
+      });
+      _saveRoutineSlots();
     }
   }
 
@@ -520,7 +565,19 @@ class _MyHomePageState extends State<MyHomePage> {
       context: context,
       barrierDismissible: true,
       builder: (BuildContext context) {
-        return const HamburgerMenuDialog();
+        return HamburgerMenuDialog(
+          routineSlots: routineSlots,
+          activeSlot: activeSlot,
+          routineSlotService: _routineSlotService,
+          onSlotsChanged: (slots, active) {
+            setState(() {
+              routineSlots = slots;
+              activeSlot = active;
+            });
+            _saveRoutineSlots();
+          },
+          isProUser: isProUser,
+        );
       },
     );
   }
@@ -569,6 +626,8 @@ class _MyHomePageState extends State<MyHomePage> {
             SelectableClockWidget(
               isDarkMode: widget.isDarkMode,
               isProUser: isProUser,
+              timeSlots: activeSlot?.timeSlots ?? [],
+              onTimeSlotsChanged: _onTimeSlotsChanged,
             ),
             const SizedBox(height: 30),
             const SizedBox(height: 20),
@@ -600,25 +659,25 @@ class _TutorialDialogState extends State<TutorialDialog> {
       title: 'Creating Time Slots',
       content:
           'Tap and drag on the clock to create time slots for your activities. The outer ring represents hours (0-23).',
-      icon: Icons.touch_app,
+      videoPath: 'assets/Slides/Slide2.mp4',
     ),
     TutorialSlide(
       title: 'Managing Your Schedule',
       content:
           'Your time slots will appear with start and end times. Tap on existing slots to modify or delete them.',
-      icon: Icons.edit_calendar,
+      videoPath: 'assets/Slides/Slide3.mp4',
     ),
     TutorialSlide(
       title: 'Settings & Customization',
       content:
           'Tap the settings button in the top-right corner to access theme toggle, language options, and more customization features.',
-      icon: Icons.settings,
+      videoPath: 'assets/Slides/Slide4.mp4',
     ),
     TutorialSlide(
       title: 'PRO Subscription Benefits',
       content:
           'Subscribe to PRO for \$6.99/year to unlock unlimited routine slots, ad-free experience, and premium features. Free users get 1 slot.',
-      icon: Icons.star,
+      videoPath: 'assets/Slides/Slide5.mp4',
     ),
   ];
 
@@ -695,17 +754,18 @@ class _TutorialDialogState extends State<TutorialDialog> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  currentSlideData.imagePath != null
-                      ? widgets.Image.asset(
-                          currentSlideData.imagePath!,
-                          width: 120,
-                          height: 120,
-                        )
-                      : Icon(
-                          currentSlideData.icon!,
-                          size: 80,
-                          color: Theme.of(context).colorScheme.primary,
-                        ),
+                  Flexible(
+                    child: Container(
+                      constraints: const BoxConstraints(
+                        maxWidth: 350,
+                        maxHeight: 300,
+                        minHeight: 250,
+                      ),
+                      child: SlideMediaWidget(
+                        slideData: currentSlideData,
+                      ),
+                    ),
+                  ),
                   const SizedBox(height: 30),
                   Text(
                     currentSlideData.title,
@@ -771,27 +831,208 @@ class TutorialSlide {
   final String content;
   final IconData? icon;
   final String? imagePath;
+  final String? videoPath;
 
   TutorialSlide({
     required this.title,
     required this.content,
     this.icon,
     this.imagePath,
+    this.videoPath,
   });
 }
 
+class SlideMediaWidget extends StatefulWidget {
+  final TutorialSlide slideData;
+
+  const SlideMediaWidget({
+    super.key,
+    required this.slideData,
+  });
+
+  @override
+  State<SlideMediaWidget> createState() => _SlideMediaWidgetState();
+}
+
+class _SlideMediaWidgetState extends State<SlideMediaWidget> {
+  VideoPlayerController? _videoController;
+  bool _isVideoInitialized = false;
+  bool _hasVideoError = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeMedia();
+  }
+
+  @override
+  void didUpdateWidget(SlideMediaWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.slideData != widget.slideData) {
+      _disposeVideo();
+      _initializeMedia();
+    }
+  }
+
+  void _initializeMedia() {
+    if (widget.slideData.videoPath != null) {
+      _initializeVideo();
+    }
+  }
+
+  Future<void> _initializeVideo() async {
+    try {
+      _videoController = VideoPlayerController.asset(widget.slideData.videoPath!);
+      await _videoController!.initialize();
+      _videoController!.setLooping(true);
+      _videoController!.play();
+      
+      if (mounted) {
+        setState(() {
+          _isVideoInitialized = true;
+          _hasVideoError = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _hasVideoError = true;
+          _isVideoInitialized = false;
+        });
+      }
+    }
+  }
+
+  void _disposeVideo() {
+    _videoController?.dispose();
+    _videoController = null;
+    _isVideoInitialized = false;
+    _hasVideoError = false;
+  }
+
+  @override
+  void dispose() {
+    _disposeVideo();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // If video is available and initialized, show video
+    if (widget.slideData.videoPath != null && _isVideoInitialized && _videoController != null) {
+      return Expanded(
+        child: Container(
+          width: double.infinity,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            color: Colors.black12,
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: FittedBox(
+              fit: BoxFit.contain,
+              child: SizedBox(
+                width: _videoController!.value.size.width,
+                height: _videoController!.value.size.height,
+                child: VideoPlayer(_videoController!),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+    
+    // If video failed and we have a fallback image, show image
+    if ((_hasVideoError || widget.slideData.videoPath == null) && widget.slideData.imagePath != null) {
+      return Expanded(
+        child: Container(
+          width: double.infinity,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            color: Colors.black12,
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: widgets.Image.asset(
+              widget.slideData.imagePath!,
+              fit: BoxFit.contain,
+              errorBuilder: (context, error, stackTrace) {
+                return _buildIconFallback();
+              },
+            ),
+          ),
+        ),
+      );
+    }
+    
+    // If no video or image, show icon or placeholder
+    return _buildIconFallback();
+  }
+
+  Widget _buildIconFallback() {
+    if (widget.slideData.icon != null) {
+      return Expanded(
+        child: Container(
+          width: double.infinity,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+          ),
+          child: Center(
+            child: Icon(
+              widget.slideData.icon!,
+              size: 120,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+          ),
+        ),
+      );
+    }
+    
+    return Expanded(
+      child: Container(
+        width: double.infinity,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          color: Theme.of(context).colorScheme.surface,
+          border: Border.all(
+            color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
+          ),
+        ),
+        child: const Center(
+          child: Text(
+            'Media not found',
+            style: TextStyle(color: Colors.grey),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class HamburgerMenuDialog extends StatefulWidget {
-  const HamburgerMenuDialog({super.key});
+  const HamburgerMenuDialog({
+    super.key,
+    required this.routineSlots,
+    required this.activeSlot,
+    required this.routineSlotService,
+    required this.onSlotsChanged,
+    required this.isProUser,
+  });
+
+  final List<RoutineSlot> routineSlots;
+  final RoutineSlot? activeSlot;
+  final RoutineSlotService routineSlotService;
+  final Function(List<RoutineSlot>, RoutineSlot?) onSlotsChanged;
+  final bool isProUser;
 
   @override
   State<HamburgerMenuDialog> createState() => _HamburgerMenuDialogState();
 }
 
 class _HamburgerMenuDialogState extends State<HamburgerMenuDialog> {
-  List<RoutineSlot> routineSlots = [
-    RoutineSlot(id: '1', name: 'Default Routine', isActive: true, isPaid: false),
-  ];
-  bool isProUser = false;
+  late List<RoutineSlot> routineSlots;
+  late RoutineSlot? activeSlot;
   bool isLoggedIn = false;
   String userEmail = '';
   final AuthService _authService = AuthService();
@@ -800,6 +1041,8 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog> {
   @override
   void initState() {
     super.initState();
+    routineSlots = List.from(widget.routineSlots);
+    activeSlot = widget.activeSlot;
     _checkAuthState();
   }
 
@@ -818,8 +1061,19 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog> {
     final userData = await _authService.getUserData();
     if (userData != null) {
       setState(() {
-        isProUser = userData['isPro'] ?? false;
+        // isProUser comes from parent widget
       });
+    }
+  }
+
+  Future<void> _updateAuthState() async {
+    final user = _authService.currentUser;
+    if (user != null) {
+      setState(() {
+        isLoggedIn = true;
+        userEmail = user.email ?? '';
+      });
+      await _loadUserData();
     }
   }
 
@@ -867,7 +1121,7 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog> {
             const SizedBox(height: 16),
             
             // Pro status indicator
-            if (!isProUser)
+            if (!widget.isProUser)
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 decoration: BoxDecoration(
@@ -909,7 +1163,7 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                onPressed: (isProUser || routineSlots.length < 2) ? _addNewSlot : null,
+                onPressed: (widget.isProUser || routineSlots.length < 2) ? _addNewSlot : null,
                 icon: const Icon(Icons.add),
                 label: Text('Add New Routine Slot'),
                 style: ElevatedButton.styleFrom(
@@ -923,7 +1177,7 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog> {
               ),
             ),
             
-            if (!isProUser && routineSlots.isNotEmpty)
+            if (!widget.isProUser && routineSlots.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(top: 8),
                 child: TextButton(
@@ -993,7 +1247,7 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog> {
                     contentPadding: EdgeInsets.zero,
                   ),
                 ),
-                if (isProUser)
+                if (widget.isProUser)
                   const PopupMenuItem(
                     value: 'duplicate',
                     child: ListTile(
@@ -1025,7 +1279,7 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog> {
   }
 
   void _addNewSlot() {
-    if (!isProUser && routineSlots.length >= 1) {
+    if (!widget.isProUser && routineSlots.length >= 1) {
       _showUpgradeDialog();
       return;
     }
@@ -1034,7 +1288,7 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog> {
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       name: 'Routine ${routineSlots.length + 1}',
       isActive: false,
-      isPaid: !isProUser ? false : true,
+      isPaid: !widget.isProUser ? false : true,
     );
     
     setState(() {
@@ -1044,28 +1298,12 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog> {
 
   void _activateSlot(RoutineSlot slot) {
     setState(() {
-      // Deactivate all slots
-      for (int i = 0; i < routineSlots.length; i++) {
-        routineSlots[i] = RoutineSlot(
-          id: routineSlots[i].id,
-          name: routineSlots[i].name,
-          isActive: false,
-          isPaid: routineSlots[i].isPaid,
-        );
-      }
-      
-      // Activate selected slot
-      final index = routineSlots.indexOf(slot);
-      routineSlots[index] = RoutineSlot(
-        id: slot.id,
-        name: slot.name,
-        isActive: true,
-        isPaid: slot.isPaid,
-      );
+      routineSlots = widget.routineSlotService.activateSlot(routineSlots, slot.id);
+      activeSlot = widget.routineSlotService.getActiveSlot(routineSlots);
     });
     
+    widget.onSlotsChanged(routineSlots, activeSlot);
     Navigator.of(context).pop();
-    // TODO: Load the routine data for this slot
   }
 
   void _renameSlot(RoutineSlot slot) {
@@ -1110,7 +1348,7 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog> {
   }
 
   void _duplicateSlot(RoutineSlot slot) {
-    if (!isProUser) {
+    if (!widget.isProUser) {
       _showUpgradeDialog();
       return;
     }
@@ -1229,13 +1467,13 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
-                      color: isProUser ? Colors.amber : Colors.grey,
+                      color: widget.isProUser ? Colors.amber : Colors.grey,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
-                      isProUser ? 'PRO MEMBER' : 'FREE USER',
+                      widget.isProUser ? 'PRO MEMBER' : 'FREE USER',
                       style: TextStyle(
-                        color: isProUser ? Colors.black : Colors.white,
+                        color: widget.isProUser ? Colors.black : Colors.white,
                         fontSize: 10,
                         fontWeight: FontWeight.bold,
                       ),
@@ -1248,7 +1486,7 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog> {
               onSelected: (value) {
                 switch (value) {
                   case 'upgrade':
-                    if (!isProUser) _showUpgradeDialog();
+                    if (!widget.isProUser) _showUpgradeDialog();
                     break;
                   case 'logout':
                     _logout();
@@ -1256,7 +1494,7 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog> {
                 }
               },
               itemBuilder: (context) => [
-                if (!isProUser)
+                if (!widget.isProUser)
                   const PopupMenuItem(
                     value: 'upgrade',
                     child: ListTile(
@@ -1277,7 +1515,7 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog> {
             ),
           ],
         ),
-        if (isProUser) ...[
+        if (widget.isProUser) ...[
           const SizedBox(height: 8),
           Row(
             children: [
@@ -1374,6 +1612,84 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog> {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              // Social Login Buttons
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: isLoading ? null : () async {
+                    setDialogState(() { isLoading = true; });
+                    try {
+                      await _authService.signInWithGoogle();
+                      await _updateAuthState();
+                      if (context.mounted) {
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Successfully signed in with Google!')),
+                        );
+                      }
+                    } catch (e) {
+                      setDialogState(() { isLoading = false; });
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Google sign in failed: ${e.toString()}')),
+                        );
+                      }
+                    }
+                  },
+                  icon: const Icon(Icons.login, color: Colors.white),
+                  label: const Text('Continue with Google'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: isLoading ? null : () async {
+                    setDialogState(() { isLoading = true; });
+                    try {
+                      await _authService.signInWithFacebook();
+                      await _updateAuthState();
+                      if (context.mounted) {
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Successfully signed in with Facebook!')),
+                        );
+                      }
+                    } catch (e) {
+                      setDialogState(() { isLoading = false; });
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Facebook sign in failed: ${e.toString()}')),
+                        );
+                      }
+                    }
+                  },
+                  icon: const Icon(Icons.facebook, color: Colors.white),
+                  label: const Text('Continue with Facebook'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(child: Divider()),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Text('or', style: Theme.of(context).textTheme.bodySmall),
+                  ),
+                  Expanded(child: Divider()),
+                ],
+              ),
+              const SizedBox(height: 20),
               TextField(
                 controller: emailController,
                 decoration: const InputDecoration(
@@ -1415,12 +1731,7 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog> {
                     passwordController.text,
                   );
                   
-                  setState(() {
-                    isLoggedIn = true;
-                    userEmail = emailController.text.trim();
-                  });
-                  
-                  await _loadUserData();
+                  await _updateAuthState();
                   if (context.mounted) {
                     Navigator.pop(context);
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -1439,7 +1750,7 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog> {
                   }
                 }
               },
-              child: const Text('Sign In'),
+              child: const Text('Sign In with Email'),
             ),
           ],
         ),
@@ -1461,6 +1772,84 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog> {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              // Social Login Buttons
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: isLoading ? null : () async {
+                    setDialogState(() { isLoading = true; });
+                    try {
+                      await _authService.signInWithGoogle();
+                      await _updateAuthState();
+                      if (context.mounted) {
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Successfully signed up with Google!')),
+                        );
+                      }
+                    } catch (e) {
+                      setDialogState(() { isLoading = false; });
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Google sign up failed: ${e.toString()}')),
+                        );
+                      }
+                    }
+                  },
+                  icon: const Icon(Icons.login, color: Colors.white),
+                  label: const Text('Continue with Google'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: isLoading ? null : () async {
+                    setDialogState(() { isLoading = true; });
+                    try {
+                      await _authService.signInWithFacebook();
+                      await _updateAuthState();
+                      if (context.mounted) {
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Successfully signed up with Facebook!')),
+                        );
+                      }
+                    } catch (e) {
+                      setDialogState(() { isLoading = false; });
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Facebook sign up failed: ${e.toString()}')),
+                        );
+                      }
+                    }
+                  },
+                  icon: const Icon(Icons.facebook, color: Colors.white),
+                  label: const Text('Continue with Facebook'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(child: Divider()),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Text('or', style: Theme.of(context).textTheme.bodySmall),
+                  ),
+                  Expanded(child: Divider()),
+                ],
+              ),
+              const SizedBox(height: 20),
               TextField(
                 controller: emailController,
                 decoration: const InputDecoration(
@@ -1525,12 +1914,7 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog> {
                     passwordController.text,
                   );
                   
-                  setState(() {
-                    isLoggedIn = true;
-                    userEmail = emailController.text.trim();
-                    isProUser = false; // New users start as free
-                  });
-                  
+                  await _updateAuthState();
                   if (context.mounted) {
                     Navigator.pop(context);
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -1549,7 +1933,7 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog> {
                   }
                 }
               },
-              child: const Text('Sign Up'),
+              child: const Text('Sign Up with Email'),
             ),
           ],
         ),
@@ -1563,7 +1947,7 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog> {
       setState(() {
         isLoggedIn = false;
         userEmail = '';
-        isProUser = false;
+        // isProUser managed by parent
       });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -1580,19 +1964,6 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog> {
   }
 }
 
-class RoutineSlot {
-  final String id;
-  final String name;
-  final bool isActive;
-  final bool isPaid;
-
-  RoutineSlot({
-    required this.id,
-    required this.name,
-    required this.isActive,
-    required this.isPaid,
-  });
-}
 
 class SettingsDialog extends StatefulWidget {
   final bool isDarkMode;

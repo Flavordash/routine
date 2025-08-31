@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:rive/rive.dart' hide LinearGradient;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
+import 'models/routine_slot_model.dart';
 
 class TimeSlot {
   final String id;
@@ -47,11 +48,15 @@ class SelectableClockWidget extends StatefulWidget {
     required this.isDarkMode,
     this.onBackgroundTap,
     this.isProUser = false,
+    this.timeSlots = const [],
+    this.onTimeSlotsChanged,
   });
 
   final bool isDarkMode;
   final VoidCallback? onBackgroundTap;
   final bool isProUser;
+  final List<RoutineTimeSlot> timeSlots;
+  final Function(List<RoutineTimeSlot>)? onTimeSlotsChanged;
 
   @override
   State<SelectableClockWidget> createState() => _SelectableClockWidgetState();
@@ -80,6 +85,9 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
   void initState() {
     super.initState();
 
+    // Convert widget timeSlots to internal TimeSlot format
+    timeSlots = widget.timeSlots.map(_routineTimeSlotToTimeSlot).toList();
+
     // Initialize main animations first
     _highlightController = AnimationController(
       duration: const Duration(milliseconds: 400),
@@ -104,6 +112,18 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
     );
 
     _initializeNotifications();
+  }
+
+  @override
+  void didUpdateWidget(SelectableClockWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    
+    // Update internal timeSlots when widget timeSlots change
+    if (oldWidget.timeSlots != widget.timeSlots) {
+      setState(() {
+        timeSlots = widget.timeSlots.map(_routineTimeSlotToTimeSlot).toList();
+      });
+    }
   }
 
   Widget _buildBackgroundAnimation() {
@@ -955,6 +975,7 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
                       _cancelNotification(existingSlot.id);
                       Navigator.of(context).pop();
                       setState(() {});
+                      _notifyTimeSlotsChanged();
                     },
                     child: const Text(
                       'Delete',
@@ -1003,6 +1024,7 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
                       // Trigger spark animation for new slots
                       _triggerSparkAnimation(selectedColor);
                     }
+                    _notifyTimeSlotsChanged();
 
                     // Schedule notification if enabled
                     _scheduleNotification(newSlot);
@@ -1077,6 +1099,7 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
                             notificationEnabled: !slot.notificationEnabled,
                           );
                           timeSlots[index] = updatedSlot;
+                          _notifyTimeSlotsChanged();
 
                           if (updatedSlot.notificationEnabled) {
                             _scheduleNotification(updatedSlot);
@@ -1411,6 +1434,52 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
         ),
       ],
     );
+  }
+
+  // Helper methods to convert between TimeSlot and RoutineTimeSlot
+  TimeSlot _routineTimeSlotToTimeSlot(RoutineTimeSlot routineTimeSlot) {
+    final startTime = routineTimeSlot.startTime.split(':');
+    final endTime = routineTimeSlot.endTime.split(':');
+    
+    return TimeSlot(
+      id: routineTimeSlot.id,
+      startHour: int.tryParse(startTime[0]) ?? 0,
+      startMinute: int.tryParse(startTime[1]) ?? 0,
+      endHour: int.tryParse(endTime[0]) ?? 0,
+      endMinute: int.tryParse(endTime[1]) ?? 0,
+      title: routineTimeSlot.label ?? 'Routine',
+      description: routineTimeSlot.description ?? '',
+      color: routineTimeSlot.color != null 
+        ? Color(routineTimeSlot.color!) 
+        : availableColors.first,
+      notificationEnabled: true,
+    );
+  }
+
+  RoutineTimeSlot _timeSlotToRoutineTimeSlot(TimeSlot timeSlot) {
+    return RoutineTimeSlot(
+      id: timeSlot.id,
+      startAngle: _hourToAngle(timeSlot.startHour, timeSlot.startMinute),
+      endAngle: _hourToAngle(timeSlot.endHour, timeSlot.endMinute),
+      startTime: '${timeSlot.startHour.toString().padLeft(2, '0')}:${timeSlot.startMinute.toString().padLeft(2, '0')}',
+      endTime: '${timeSlot.endHour.toString().padLeft(2, '0')}:${timeSlot.endMinute.toString().padLeft(2, '0')}',
+      label: timeSlot.title,
+      description: timeSlot.description,
+      color: timeSlot.color.value,
+      createdAt: DateTime.now(),
+    );
+  }
+
+  double _hourToAngle(int hour, int minute) {
+    final totalMinutes = (hour % 24) * 60 + minute;
+    return (totalMinutes / (24 * 60)) * 360;
+  }
+
+  void _notifyTimeSlotsChanged() {
+    if (widget.onTimeSlotsChanged != null) {
+      final routineTimeSlots = timeSlots.map(_timeSlotToRoutineTimeSlot).toList();
+      widget.onTimeSlotsChanged!(routineTimeSlots);
+    }
   }
 }
 
