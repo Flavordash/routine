@@ -4,6 +4,7 @@ import 'package:rive/rive.dart' hide LinearGradient;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'models/routine_slot_model.dart';
+import 'l10n/app_localizations.dart';
 
 class TimeSlot {
   final String id;
@@ -62,12 +63,12 @@ class SelectableClockWidget extends StatefulWidget {
   State<SelectableClockWidget> createState() => _SelectableClockWidgetState();
 }
 
-class _SelectableClockWidgetState extends State<SelectableClockWidget>
-    with TickerProviderStateMixin {
+class _SelectableClockWidgetState extends State<SelectableClockWidget> with TickerProviderStateMixin {
   int? startHour;
   int? endHour;
   List<TimeSlot> timeSlots = [];
   late AnimationController _highlightController;
+  late AnimationController _addButtonController;
   late Animation<double> _highlightAnimation;
   late AnimationController _pulseController;
   late AnimationController _sparkController;
@@ -109,6 +110,11 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
     _sparkAnimation = CurvedAnimation(
       parent: _sparkController,
       curve: Curves.easeOut,
+    );
+
+    _addButtonController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
     );
 
     _initializeNotifications();
@@ -277,7 +283,7 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Your Time Slots',
+                AppLocalizations.of(context)!.yourTimeSlots,
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -291,9 +297,15 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: IconButton(
-                  onPressed: () => _showCreateTimeSlotModal(),
-                  icon: Icon(
-                    Icons.add,
+                  onPressed: () {
+                    _addButtonController.forward().then((_) {
+                      _addButtonController.reverse();
+                    });
+                    _showCreateTimeSlotModal();
+                  },
+                  icon: AnimatedIcon(
+                    icon: AnimatedIcons.add_event,
+                    progress: _addButtonController,
                     color: Theme.of(context).colorScheme.onPrimary,
                     size: 20,
                   ),
@@ -325,7 +337,7 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
             padding: const EdgeInsets.all(20),
             child: Center(
               child: Text(
-                'No time slots yet. Tap + to create one or drag on the circle!',
+                AppLocalizations.of(context)!.noTimeSlotsYet,
                 style: TextStyle(
                   color: Theme.of(
                     context,
@@ -482,7 +494,7 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
                 ),
               ),
               title: Text(
-                existingSlot != null ? 'Edit Time Slot' : 'Create Time Slot',
+                existingSlot != null ? AppLocalizations.of(context)!.editTimeSlot : AppLocalizations.of(context)!.createTimeSlot,
                 style: TextStyle(
                   color: Theme.of(context).colorScheme.onSurface,
                 ),
@@ -527,7 +539,7 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
 
                     // Title Input
                     Text(
-                      'Title of this time',
+                      AppLocalizations.of(context)!.titleOfThisTime,
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w500,
@@ -541,7 +553,7 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
                         color: Theme.of(context).colorScheme.onSurface,
                       ),
                       decoration: InputDecoration(
-                        hintText: 'e.g., Work, Exercise, Sleep...',
+                        hintText: AppLocalizations.of(context)!.titleHint,
                         hintStyle: TextStyle(
                           color: Theme.of(
                             context,
@@ -574,7 +586,7 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
 
                     // Description Input
                     Text(
-                      'Description of this time',
+                      AppLocalizations.of(context)!.descriptionOfThisTime,
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w500,
@@ -589,7 +601,7 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
                         color: Theme.of(context).colorScheme.onSurface,
                       ),
                       decoration: InputDecoration(
-                        hintText: 'e.g., Morning workout routine, Team meeting...',
+                        hintText: AppLocalizations.of(context)!.descriptionHint,
                         hintStyle: TextStyle(
                           color: Theme.of(
                             context,
@@ -622,7 +634,7 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
 
                     // Time Adjustment Section
                     Text(
-                      'Adjust time:',
+                      AppLocalizations.of(context)!.adjustTime,
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w500,
@@ -635,7 +647,7 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
                     Row(
                       children: [
                         Text(
-                          'From: ',
+                          AppLocalizations.of(context)!.from,
                           style: TextStyle(
                             color: Theme.of(context).colorScheme.onSurface,
                             fontSize: 14,
@@ -757,7 +769,7 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
                     Row(
                       children: [
                         Text(
-                          'To: ',
+                          AppLocalizations.of(context)!.to,
                           style: TextStyle(
                             color: Theme.of(context).colorScheme.onSurface,
                             fontSize: 14,
@@ -877,7 +889,7 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
 
                     // Color Picker
                     Text(
-                      'Choose a color:',
+                      AppLocalizations.of(context)!.chooseColor,
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w500,
@@ -934,7 +946,7 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            'Enable notifications',
+                            AppLocalizations.of(context)!.enableNotifications,
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w500,
@@ -1033,7 +1045,7 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
                     _clearSelection();
                     setState(() {});
                   },
-                  child: Text(existingSlot != null ? 'Update' : 'Create'),
+                  child: Text(existingSlot != null ? AppLocalizations.of(context)!.update : AppLocalizations.of(context)!.create),
                 ),
               ],
             );
@@ -1312,6 +1324,7 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
     _highlightController.dispose();
     _pulseController.dispose();
     _sparkController.dispose();
+    _addButtonController.dispose();
     super.dispose();
   }
 
@@ -1364,7 +1377,7 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'PRO MEMBER',
+                AppLocalizations.of(context)!.proMember,
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 16,
@@ -1373,7 +1386,7 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
               ),
               const SizedBox(height: 2),
               Text(
-                'Thanks for supporting Routine 24! Enjoy unlimited slots and ad-free experience.',
+                AppLocalizations.of(context)!.thanksForSupporting,
                 style: TextStyle(
                   color: Colors.white.withValues(alpha: 0.9),
                   fontSize: 12,
@@ -1411,7 +1424,7 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'Advertisement Space',
+                  AppLocalizations.of(context)!.advertisementSpace,
                   style: TextStyle(
                     color: Colors.white.withValues(alpha: 0.7),
                     fontSize: 10,
@@ -1424,7 +1437,7 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
         ),
         const SizedBox(height: 8),
         Text(
-          'Upgrade to Pro for \$6.99/year - No ads, unlimited slots!',
+          AppLocalizations.of(context)!.upgradeToProAd,
           style: TextStyle(
             color: Colors.white.withValues(alpha: 0.8),
             fontSize: 11,

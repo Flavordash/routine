@@ -1,0 +1,399 @@
+{
+  "@@locale": "en",
+  "appTitle": "Routine - 24-Hour Clock Selector",
+  "@appTitle": {
+    "description": "The title of the application"
+  },
+  "homeTitle": "24-Hour Clock Selector",
+  "@homeTitle": {
+    "description": "The title shown on the home page"
+  },
+  "settings": "Settings",
+  "@settings": {
+    "description": "Settings button text"
+  },
+  "yourTimeSlots": "Your Time Slots",
+  "@yourTimeSlots": {
+    "description": "Title for time slots section"
+  },
+  "noTimeSlotsYet": "No time slots yet. Tap + to create one or drag on the circle!",
+  "@noTimeSlotsYet": {
+    "description": "Message when there are no time slots"
+  },
+  "routineSlots": "Routine Slots",
+  "@routineSlots": {
+    "description": "Title for routine slots dialog"
+  },
+  "signInToSync": "Sign in to sync your routines",
+  "@signInToSync": {
+    "description": "Prompt to sign in"
+  },
+  "signIn": "Sign In",
+  "@signIn": {
+    "description": "Sign in button text"
+  },
+  "signUp": "Sign Up",
+  "@signUp": {
+    "description": "Sign up button text"
+  },
+  "continueWithGoogle": "Continue with Google",
+  "@continueWithGoogle": {
+    "description": "Google sign in button text"
+  },
+  "continueWithFacebook": "Continue with Facebook",
+  "@continueWithFacebook": {
+    "description": "Facebook sign in button text"
+  },
+  "email": "Email",
+  "@email": {
+    "description": "Email input field label"
+  },
+  "password": "Password",
+  "@password": {
+    "description": "Password input field label"
+  },
+  "confirmPassword": "Confirm Password",
+  "@confirmPassword": {
+    "description": "Confirm password input field label"
+  },
+  "cancel": "Cancel",
+  "@cancel": {
+    "description": "Cancel button text"
+  },
+  "signInWithEmail": "Sign In with Email",
+  "@signInWithEmail": {
+    "description": "Email sign in button text"
+  },
+  "signUpWithEmail": "Sign Up with Email",
+  "@signUpWithEmail": {
+    "description": "Email sign up button text"
+  },
+  "logout": "Logout",
+  "@logout": {
+    "description": "Logout button text"
+  },
+  "upgradeToProButton": "Upgrade to Pro",
+  "@upgradeToProButton": {
+    "description": "Upgrade to pro button text"
+  },
+  "proMember": "PRO MEMBER",
+  "@proMember": {
+    "description": "Pro member badge text"
+  },
+  "freeUser": "FREE USER",
+  "@freeUser": {
+    "description": "Free user badge text"
+  },
+  "addNewRoutineSlot": "Add New Routine Slot",
+  "@addNewRoutineSlot": {
+    "description": "Add new routine slot button text"
+  },
+  "currentlyActive": "Currently Active",
+  "@currentlyActive": {
+    "description": "Status text for active routine slot"
+  },
+  "tapToActivate": "Tap to activate",
+  "@tapToActivate": {
+    "description": "Status text for inactive routine slot"
+  },
+  "rename": "Rename",
+  "@rename": {
+    "description": "Rename menu item"
+  },
+  "duplicate": "Duplicate",
+  "@duplicate": {
+    "description": "Duplicate menu item"
+  },
+  "delete": "Delete",
+  "@delete": {
+    "description": "Delete menu item"
+  },
+  "renameRoutine": "Rename Routine",
+  "@renameRoutine": {
+    "description": "Rename routine dialog title"
+  },
+  "routineName": "Routine Name",
+  "@routineName": {
+    "description": "Routine name input field label"
+  },
+  "save": "Save",
+  "@save": {
+    "description": "Save button text"
+  },
+  "deleteRoutine": "Delete Routine",
+  "@deleteRoutine": {
+    "description": "Delete routine dialog title"
+  },
+  "deleteRoutineConfirm": "Are you sure you want to delete \"{name}\"?",
+  "@deleteRoutineConfirm": {
+    "description": "Delete routine confirmation message",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Morning Routine"
+      }
+    }
+  },
+  "createTimeSlot": "Create Time Slot",
+  "@createTimeSlot": {
+    "description": "Create time slot dialog title"
+  },
+  "editTimeSlot": "Edit Time Slot",
+  "@editTimeSlot": {
+    "description": "Edit time slot dialog title"
+  },
+  "titleOfThisTime": "Title of this time",
+  "@titleOfThisTime": {
+    "description": "Time slot title input label"
+  },
+  "titleHint": "e.g., Work, Exercise, Sleep...",
+  "@titleHint": {
+    "description": "Time slot title input hint"
+  },
+  "descriptionOfThisTime": "Description of this time",
+  "@descriptionOfThisTime": {
+    "description": "Time slot description input label"
+  },
+  "descriptionHint": "e.g., Morning workout routine, Team meeting...",
+  "@descriptionHint": {
+    "description": "Time slot description input hint"
+  },
+  "adjustTime": "Adjust time:",
+  "@adjustTime": {
+    "description": "Adjust time section label"
+  },
+  "from": "From: ",
+  "@from": {
+    "description": "Start time label"
+  },
+  "to": "To: ",
+  "@to": {
+    "description": "End time label"
+  },
+  "chooseColor": "Choose a color:",
+  "@chooseColor": {
+    "description": "Color picker section label"
+  },
+  "enableNotifications": "Enable notifications",
+  "@enableNotifications": {
+    "description": "Notifications toggle label"
+  },
+  "create": "Create",
+  "@create": {
+    "description": "Create button text"
+  },
+  "update": "Update",
+  "@update": {
+    "description": "Update button text"
+  },
+  "duration": "Duration: {duration}",
+  "@duration": {
+    "description": "Duration display text",
+    "placeholders": {
+      "duration": {
+        "type": "String",
+        "example": "2h 30m"
+      }
+    }
+  },
+  "durationSuffix": "{duration} duration",
+  "@durationSuffix": {
+    "description": "Duration suffix for time slot cards",
+    "placeholders": {
+      "duration": {
+        "type": "String",
+        "example": "2h 30m"
+      }
+    }
+  },
+  "appearance": "Appearance",
+  "@appearance": {
+    "description": "Appearance settings section"
+  },
+  "theme": "Theme",
+  "@theme": {
+    "description": "Theme setting label"
+  },
+  "darkMode": "Dark Mode",
+  "@darkMode": {
+    "description": "Dark mode label"
+  },
+  "lightMode": "Light Mode",
+  "@lightMode": {
+    "description": "Light mode label"
+  },
+  "language": "Language",
+  "@language": {
+    "description": "Language setting label"
+  },
+  "selectLanguage": "Select Language",
+  "@selectLanguage": {
+    "description": "Language selector dialog title"
+  },
+  "helpAndSupport": "Help & Support",
+  "@helpAndSupport": {
+    "description": "Help and support section title"
+  },
+  "tutorial": "Tutorial",
+  "@tutorial": {
+    "description": "Tutorial menu item"
+  },
+  "learnHowToUse": "Learn how to use the app",
+  "@learnHowToUse": {
+    "description": "Tutorial description"
+  },
+  "about": "About",
+  "@about": {
+    "description": "About section title"
+  },
+  "developedBy": "Developed By Kwanhoon Lee",
+  "@developedBy": {
+    "description": "Developer credit"
+  },
+  "copyright": "© 2025 - Made For me and YOU",
+  "@copyright": {
+    "description": "Copyright notice"
+  },
+  "languageChanged": "Language changed to {language}",
+  "@languageChanged": {
+    "description": "Language change confirmation message",
+    "placeholders": {
+      "language": {
+        "type": "String",
+        "example": "English"
+      }
+    }
+  },
+  "welcomeToRoutine": "Welcome to Routine 24",
+  "@welcomeToRoutine": {
+    "description": "Tutorial welcome title"
+  },
+  "planYourDay": "Plan your day with our interactive 24-hour clock interface.",
+  "@planYourDay": {
+    "description": "Tutorial welcome description"
+  },
+  "creatingTimeSlots": "Creating Time Slots",
+  "@creatingTimeSlots": {
+    "description": "Tutorial slide 2 title"
+  },
+  "creatingTimeSlotsDesc": "Tap and drag on the clock to create time slots for your activities. The outer ring represents hours (0-23).",
+  "@creatingTimeSlotsDesc": {
+    "description": "Tutorial slide 2 description"
+  },
+  "managingYourSchedule": "Managing Your Schedule",
+  "@managingYourSchedule": {
+    "description": "Tutorial slide 3 title"
+  },
+  "managingYourScheduleDesc": "Your time slots will appear with start and end times. Tap on existing slots to modify or delete them.",
+  "@managingYourScheduleDesc": {
+    "description": "Tutorial slide 3 description"
+  },
+  "settingsCustomization": "Settings & Customization",
+  "@settingsCustomization": {
+    "description": "Tutorial slide 4 title"
+  },
+  "settingsCustomizationDesc": "Tap the settings button in the top-right corner to access theme toggle, language options, and more customization features.",
+  "@settingsCustomizationDesc": {
+    "description": "Tutorial slide 4 description"
+  },
+  "proSubscriptionBenefits": "PRO Subscription Benefits",
+  "@proSubscriptionBenefits": {
+    "description": "Tutorial slide 5 title"
+  },
+  "proSubscriptionBenefitsDesc": "Subscribe to PRO for $6.99/year to unlock unlimited routine slots, ad-free experience, and premium features. Free users get 1 slot.",
+  "@proSubscriptionBenefitsDesc": {
+    "description": "Tutorial slide 5 description"
+  },
+  "getStarted": "Get Started",
+  "@getStarted": {
+    "description": "Tutorial finish button"
+  },
+  "previous": "Previous",
+  "@previous": {
+    "description": "Previous button in tutorial"
+  },
+  "next": "Next",
+  "@next": {
+    "description": "Next button in tutorial"
+  },
+  "freeUsersOneSlot": "Free users can use 1 slot. Upgrade to Pro for unlimited slots.",
+  "@freeUsersOneSlot": {
+    "description": "Free user limitation message"
+  },
+  "proFeatures": "Pro features include:",
+  "@proFeatures": {
+    "description": "Pro features list header"
+  },
+  "unlimitedSlots": "• Unlimited routine slots",
+  "@unlimitedSlots": {
+    "description": "Pro feature: unlimited slots"
+  },
+  "duplicateRoutines": "• Duplicate routines",
+  "@duplicateRoutines": {
+    "description": "Pro feature: duplicate routines"
+  },
+  "prioritySupport": "• Priority support",
+  "@prioritySupport": {
+    "description": "Pro feature: priority support"
+  },
+  "advancedCustomization": "• Advanced customization",
+  "@advancedCustomization": {
+    "description": "Pro feature: advanced customization"
+  },
+  "later": "Later",
+  "@later": {
+    "description": "Later button text"
+  },
+  "upgradeNow": "Upgrade Now",
+  "@upgradeNow": {
+    "description": "Upgrade now button text"
+  },
+  "thanksForSupporting": "Thanks for supporting Routine 24! Enjoy unlimited slots and ad-free experience.",
+  "@thanksForSupporting": {
+    "description": "Thank you message for pro users"
+  },
+  "advertisementSpace": "Advertisement Space",
+  "@advertisementSpace": {
+    "description": "Advertisement placeholder text"
+  },
+  "upgradeToProAd": "Upgrade to Pro for $6.99/year - No ads, unlimited slots!",
+  "@upgradeToProAd": {
+    "description": "Pro upgrade advertisement text"
+  },
+  "signInSuccess": "Successfully signed in!",
+  "@signInSuccess": {
+    "description": "Sign in success message"
+  },
+  "signOutSuccess": "Successfully signed out",
+  "@signOutSuccess": {
+    "description": "Sign out success message"
+  },
+  "accountCreatedSuccess": "Account created successfully!",
+  "@accountCreatedSuccess": {
+    "description": "Account creation success message"
+  },
+  "passwordsDoNotMatch": "Passwords do not match",
+  "@passwordsDoNotMatch": {
+    "description": "Password mismatch error message"
+  },
+  "passwordMinLength": "Password must be at least 6 characters",
+  "@passwordMinLength": {
+    "description": "Password minimum length error message"
+  },
+  "upgradeToProUnlimited": "Upgrade to Pro for unlimited slots",
+  "@upgradeToProUnlimited": {
+    "description": "Upgrade to pro for unlimited slots message"
+  },
+  "mediaNotFound": "Media not found",
+  "@mediaNotFound": {
+    "description": "Media not found placeholder text"
+  },
+  "or": "or",
+  "@or": {
+    "description": "Or separator text"
+  },
+  "defaultRoutine": "Default Routine",
+  "@defaultRoutine": {
+    "description": "Default routine name for new users"
+  }
+}

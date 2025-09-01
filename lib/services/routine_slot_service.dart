@@ -131,6 +131,9 @@ class RoutineSlotService {
 
   // Default slots for new users
   List<RoutineSlot> _getDefaultSlots() {
+    if (currentUser == null) {
+      return [];
+    }
     return [
       RoutineSlot(
         id: '1',

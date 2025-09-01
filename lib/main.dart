@@ -1,15 +1,19 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart' as widgets;
-import 'package:rive/rive.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:video_player/video_player.dart';
 import 'selectable_clock_widget.dart';
 import 'services/auth_service.dart';
 import 'services/routine_slot_service.dart';
+import 'services/language_service.dart';
 import 'models/user_model.dart';
 import 'models/routine_slot_model.dart';
 import 'firebase_options.dart';
+import 'l10n/app_localizations.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -28,6 +32,37 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   bool isDarkMode = true;
+  final LanguageService languageService = LanguageService();
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeLanguage();
+  }
+
+  void _initializeLanguage() async {
+    print('Initializing language...'); // Debug log
+    await languageService.loadSavedLanguage();
+    print('Language loaded, current locale: ${languageService.locale}'); // Debug log
+    languageService.addListener(_onLanguageChanged);
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  void _onLanguageChanged() {
+    if (mounted) {
+      setState(() {
+        print('Language changed, rebuilding app with locale: ${languageService.locale}');
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    languageService.removeListener(_onLanguageChanged);
+    super.dispose();
+  }
 
   void toggleTheme() {
     setState(() {
@@ -37,14 +72,24 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
+    print('App rebuilding with locale: ${languageService.locale}'); // Debug log
     return MaterialApp(
       title: 'Routine - 24-Hour Clock Selector',
       debugShowCheckedModeBanner: false,
       theme: isDarkMode ? _buildDarkTheme() : _buildLightTheme(),
+      locale: languageService.locale,
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: languageService.supportedLocales,
       home: MyHomePage(
         title: '24-Hour Clock Selector',
         isDarkMode: isDarkMode,
         onThemeToggle: toggleTheme,
+        languageService: languageService,
       ),
     );
   }
@@ -122,30 +167,60 @@ class MyHomePage extends StatefulWidget {
     required this.title,
     required this.isDarkMode,
     required this.onThemeToggle,
+    required this.languageService,
   });
 
   final String title;
   final bool isDarkMode;
   final VoidCallback onThemeToggle;
+  final LanguageService languageService;
 
   @override
   State<MyHomePage> createState() => _MyHomePageState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
-  StateMachineController? _stateMachineController;
+class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
   bool isProUser = false;
+  late AnimationController _menuAnimationController;
   bool isLoggedIn = false;
   final AuthService _authService = AuthService();
   final RoutineSlotService _routineSlotService = RoutineSlotService();
   List<RoutineSlot> routineSlots = [];
   RoutineSlot? activeSlot;
+  StreamSubscription<User?>? _authStateSubscription;
 
   @override
   void initState() {
     super.initState();
+    _menuAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
     _checkAuthState();
     _loadRoutineSlots();
+    _setupAuthStateListener();
+  }
+
+  void _setupAuthStateListener() {
+    _authStateSubscription = _authService.authStateChanges.listen((User? user) {
+      if (mounted) {
+        setState(() {
+          isLoggedIn = user != null;
+          if (user == null) {
+            isProUser = false;
+            routineSlots = [];
+            activeSlot = null;
+          }
+        });
+        
+        if (user != null) {
+          _loadUserData();
+          _loadRoutineSlots();
+        } else {
+          _loadRoutineSlots();
+        }
+      }
+    });
   }
 
   void _checkAuthState() {
@@ -201,354 +276,10 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
-  Widget _buildThemeToggleButton() {
-    return Center(
-      child: SizedBox(
-        width: 60,
-        height: 20,
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: () {
-            // Animate BEFORE changing theme for better responsiveness
-            _animateToggle();
-            // Small delay to let animation start, then change theme
-            Future.delayed(const Duration(milliseconds: 50), () {
-              widget.onThemeToggle();
-            });
-          },
-          child: Container(
-            width: 50,
-            height: 20,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(8),
-              color: const Color.fromARGB(0, 126, 11, 11),
-            ),
-            child: RiveAnimation.asset(
-              'assets/animations/ThemeToggle.riv',
-              fit: BoxFit.fitWidth,
-              onInit: (artboard) {
-                debugPrint('🔄 Rive onInit called for ThemeToggle');
 
-                // Try different state machine names
-                StateMachineController? controller =
-                    StateMachineController.fromArtboard(
-                      artboard,
-                      'Light/Dark Mode Button',
-                    );
 
-                if (controller == null) {
-                  debugPrint(
-                    '⚠️ "Light/Dark Mode Button" not found, trying alternatives...',
-                  );
-                  controller =
-                      StateMachineController.fromArtboard(
-                        artboard,
-                        'State Machine 1',
-                      ) ??
-                      StateMachineController.fromArtboard(
-                        artboard,
-                        'State Machine',
-                      ) ??
-                      StateMachineController.fromArtboard(artboard, 'Theme') ??
-                      StateMachineController.fromArtboard(artboard, 'Toggle') ??
-                      StateMachineController.fromArtboard(artboard, 'Button');
-                }
 
-                if (controller != null) {
-                  artboard.addController(controller);
-                  _stateMachineController = controller;
-                  debugPrint(
-                    '✅ State machine controller initialized successfully',
-                  );
 
-                  // Debug: List all available inputs
-                  debugPrint('📋 Available inputs:');
-                  for (var input in controller.inputs) {
-                    debugPrint('  - ${input.name} (${input.runtimeType})');
-                  }
-
-                  // Set initial state - try the actual input name we found
-                  final boolInput =
-                      controller.findInput<bool>('Toggle_Is_Pressed') ??
-                      controller.findInput<bool>('isDark') ??
-                      controller.findInput<bool>('darkMode') ??
-                      controller.findInput<bool>('isLightMode') ??
-                      controller.findInput<bool>('dark') ??
-                      controller.findInput<bool>('light');
-
-                  if (boolInput != null) {
-                    // Handle the specific "Toggle_Is_Pressed" input
-                    if (boolInput.name == 'Toggle_Is_Pressed') {
-                      // For Toggle_Is_Pressed, we need to test which value shows dark mode
-                      // Try setting it to match the current theme state
-                      boolInput.value = widget.isDarkMode;
-                      debugPrint(
-                        '✅ Toggle_Is_Pressed set to: ${boolInput.value} (isDarkMode: ${widget.isDarkMode})',
-                      );
-                    } else if (boolInput.name.toLowerCase().contains('light')) {
-                      boolInput.value =
-                          !widget.isDarkMode; // Light mode when NOT dark
-                    } else {
-                      boolInput.value =
-                          widget.isDarkMode; // Dark mode when IS dark
-                    }
-                    debugPrint(
-                      '✅ Boolean input "${boolInput.name}" set to: ${boolInput.value} (isDarkMode: ${widget.isDarkMode})',
-                    );
-                  } else {
-                    debugPrint('⚠️ No boolean input found, trying triggers...');
-
-                    // Debug: List all trigger inputs to find the correct names
-                    debugPrint('🔍 All trigger inputs:');
-                    for (var input in controller.inputs) {
-                      if (input is SMITrigger) {
-                        debugPrint('  - TRIGGER: "${input.name}"');
-                      }
-                    }
-
-                    // Force correct state after short delay to ensure it takes effect
-                    Future.delayed(const Duration(milliseconds: 200), () {
-                      if (controller != null && boolInput != null) {
-                        // Double-check the boolean state in case it didn't take effect immediately
-                        if (boolInput.name == 'Toggle_Is_Pressed') {
-                          debugPrint(
-                            '🔧 Double-checking Toggle_Is_Pressed state...',
-                          );
-                          boolInput.value = widget.isDarkMode;
-                          debugPrint(
-                            '✅ Toggle_Is_Pressed re-confirmed: ${boolInput.value}',
-                          );
-                        }
-                      }
-                    });
-                  }
-                } else {
-                  debugPrint(
-                    '❌ No compatible state machine found in ThemeToggle.riv',
-                  );
-                  debugPrint('💡 Available state machines:');
-                  // Try to list available state machines
-                  try {
-                    final stateMachines = artboard.stateMachines;
-                    for (var sm in stateMachines) {
-                      debugPrint('  - "${sm.name}"');
-                    }
-                  } catch (e) {
-                    debugPrint('  Could not list state machines: $e');
-                  }
-                }
-              },
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _initializeTriggerInputs(StateMachineController controller) {
-    // Try to find triggers with many possible names
-    final triggerNames = [
-      'toLight',
-      'light',
-      'lightMode',
-      'switchToLight',
-      'goLight',
-      'lightOn',
-      'toDark',
-      'dark',
-      'darkMode',
-      'switchToDark',
-      'goDark',
-      'darkOn',
-      'toggle',
-      'switch',
-      'change',
-      'flip',
-      'press',
-      'tap',
-      'click',
-    ];
-
-    SMITrigger? lightTrigger;
-    SMITrigger? darkTrigger;
-    SMITrigger? generalTrigger;
-
-    for (String name in triggerNames) {
-      final trigger = controller.findSMI(name) as SMITrigger?;
-      if (trigger != null) {
-        debugPrint('🎯 Found trigger: "${trigger.name}"');
-
-        // Categorize triggers by name
-        if (name.toLowerCase().contains('light')) {
-          lightTrigger = trigger;
-        } else if (name.toLowerCase().contains('dark')) {
-          darkTrigger = trigger;
-        } else {
-          generalTrigger = trigger; // toggle, switch, etc.
-        }
-      }
-    }
-
-    // Fire appropriate trigger to SHOW current theme state (not switch to it)
-    if (widget.isDarkMode && darkTrigger != null) {
-      darkTrigger.fire();
-      debugPrint(
-        '✅ Dark trigger "${darkTrigger.name}" fired (showing dark theme: moon/star)',
-      );
-    } else if (!widget.isDarkMode && lightTrigger != null) {
-      lightTrigger.fire();
-      debugPrint(
-        '✅ Light trigger "${lightTrigger.name}" fired (showing light theme: sun/cloud)',
-      );
-    } else if (generalTrigger != null) {
-      // Use general toggle trigger if specific ones aren't found
-      generalTrigger.fire();
-      debugPrint('✅ General trigger "${generalTrigger.name}" fired');
-    } else {
-      debugPrint(
-        '❌ No suitable triggers found among: ${triggerNames.join(", ")}',
-      );
-    }
-  }
-
-  void _animateToggle() {
-    debugPrint(
-      '🎯 _animateToggle called - current isDarkMode: ${widget.isDarkMode}',
-    );
-
-    if (_stateMachineController == null) {
-      debugPrint(
-        '❌ State machine controller is null! Animation will be skipped.',
-      );
-      // Still allow the theme toggle to work even without animation
-      return;
-    }
-
-    // Try boolean input first
-    final boolInput =
-        _stateMachineController!.findInput<bool>('isDark') ??
-        _stateMachineController!.findInput<bool>('darkMode') ??
-        _stateMachineController!.findInput<bool>('isLightMode');
-
-    if (boolInput != null) {
-      final newValue = !widget.isDarkMode; // What we're switching TO
-      // Set the correct value based on input name
-      if (boolInput.name.toLowerCase().contains('light')) {
-        boolInput.value = newValue; // Light mode = !darkMode
-      } else {
-        boolInput.value = !newValue; // Dark mode = darkMode
-      }
-      debugPrint(
-        '✅ Navbar boolean input (${boolInput.name}) toggled to: ${boolInput.value} (switching to isDarkMode: ${!widget.isDarkMode})',
-      );
-    } else {
-      debugPrint('⚠️ No boolean input found, trying triggers...');
-
-      // Use the same comprehensive trigger search as initialization
-      _findAndFireTrigger();
-    }
-  }
-
-  void _findAndFireTrigger() {
-    if (_stateMachineController == null) return;
-
-    // Try to find triggers with many possible names
-    final triggerNames = [
-      'toLight',
-      'light',
-      'lightMode',
-      'switchToLight',
-      'goLight',
-      'lightOn',
-      'toDark',
-      'dark',
-      'darkMode',
-      'switchToDark',
-      'goDark',
-      'darkOn',
-      'toggle',
-      'switch',
-      'change',
-      'flip',
-      'press',
-      'tap',
-      'click',
-    ];
-
-    SMITrigger? lightTrigger;
-    SMITrigger? darkTrigger;
-    SMITrigger? generalTrigger;
-
-    for (String name in triggerNames) {
-      final trigger = _stateMachineController!.findSMI(name) as SMITrigger?;
-      if (trigger != null) {
-        // Categorize triggers by name
-        if (name.toLowerCase().contains('light')) {
-          lightTrigger = trigger;
-        } else if (name.toLowerCase().contains('dark')) {
-          darkTrigger = trigger;
-        } else {
-          generalTrigger = trigger; // toggle, switch, etc.
-        }
-      }
-    }
-
-    debugPrint(
-      '🔍 Found triggers - light: ${lightTrigger?.name}, dark: ${darkTrigger?.name}, general: ${generalTrigger?.name}',
-    );
-
-    // Fire trigger for what we're switching TO (opposite of current theme)
-    if (widget.isDarkMode && lightTrigger != null) {
-      lightTrigger.fire();
-      debugPrint('✅ Light trigger fired (switching TO light: sun/cloud)');
-    } else if (!widget.isDarkMode && darkTrigger != null) {
-      darkTrigger.fire();
-      debugPrint('✅ Dark trigger fired (switching TO dark: moon/star)');
-    } else if (generalTrigger != null) {
-      // Use general toggle trigger if specific ones aren't found
-      generalTrigger.fire();
-      debugPrint('✅ General trigger "${generalTrigger.name}" fired');
-    } else {
-      debugPrint(
-        '❌ No suitable trigger found among: ${triggerNames.join(", ")}',
-      );
-    }
-  }
-
-  @override
-  void didUpdateWidget(MyHomePage oldWidget) {
-    super.didUpdateWidget(oldWidget);
-
-    // Update animation when theme changes from parent
-    if (oldWidget.isDarkMode != widget.isDarkMode &&
-        _stateMachineController != null) {
-      _updateAnimationState();
-    }
-  }
-
-  void _updateAnimationState() {
-    if (_stateMachineController == null) return;
-
-    final boolInput =
-        _stateMachineController!.findInput<bool>('isDark') ??
-        _stateMachineController!.findInput<bool>('darkMode') ??
-        _stateMachineController!.findInput<bool>('isLightMode');
-
-    if (boolInput != null) {
-      // Set the correct value based on input name
-      if (boolInput.name.toLowerCase().contains('light')) {
-        boolInput.value = !widget.isDarkMode; // Light mode when NOT dark
-      } else {
-        boolInput.value = widget.isDarkMode; // Dark mode when IS dark
-      }
-      debugPrint(
-        'Navbar animation state updated - ${boolInput.name}: ${boolInput.value} (isDarkMode: ${widget.isDarkMode})',
-      );
-    } else {
-      // Use trigger inputs to update state
-      _initializeTriggerInputs(_stateMachineController!);
-    }
-  }
 
   void _showTutorial(BuildContext context) {
     showDialog(
@@ -579,7 +310,10 @@ class _MyHomePageState extends State<MyHomePage> {
           isProUser: isProUser,
         );
       },
-    );
+    ).then((_) {
+      // Reset hamburger menu animation when dialog closes
+      _menuAnimationController.reverse();
+    });
   }
 
   void _showSettings(BuildContext context) {
@@ -590,6 +324,7 @@ class _MyHomePageState extends State<MyHomePage> {
         return SettingsDialog(
           isDarkMode: widget.isDarkMode,
           onThemeToggle: widget.onThemeToggle,
+          languageService: widget.languageService,
         );
       },
     );
@@ -601,15 +336,26 @@ class _MyHomePageState extends State<MyHomePage> {
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         toolbarHeight: 80, // Make navbar taller (default is 56)
-        leading: IconButton(
-          icon: const Icon(Icons.menu),
-          onPressed: () {
-            _showHamburgerMenu(context);
-          },
+        leading: Container(
+          margin: const EdgeInsets.only(left: 19.0),
+          child: IconButton(
+            icon: AnimatedIcon(
+              icon: AnimatedIcons.menu_close,
+              progress: _menuAnimationController,
+            ),
+            onPressed: () {
+              if (_menuAnimationController.isCompleted) {
+                _menuAnimationController.reverse();
+              } else {
+                _menuAnimationController.forward();
+              }
+              _showHamburgerMenu(context);
+            },
+          ),
         ),
         actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 19.0),
+          Container(
+            margin: const EdgeInsets.only(right: 19.0),
             child: IconButton(
               icon: const Icon(Icons.settings),
               onPressed: () {
@@ -636,6 +382,13 @@ class _MyHomePageState extends State<MyHomePage> {
       ),
     );
   }
+
+  @override
+  void dispose() {
+    _menuAnimationController.dispose();
+    _authStateSubscription?.cancel();
+    super.dispose();
+  }
 }
 
 class TutorialDialog extends StatefulWidget {
@@ -645,41 +398,53 @@ class TutorialDialog extends StatefulWidget {
   State<TutorialDialog> createState() => _TutorialDialogState();
 }
 
-class _TutorialDialogState extends State<TutorialDialog> {
+class _TutorialDialogState extends State<TutorialDialog> with TickerProviderStateMixin {
   int currentSlide = 0;
   final int totalSlides = 5;
+  late AnimationController _closeAnimationController;
 
-  final List<TutorialSlide> slides = [
+  List<TutorialSlide> get slides => [
     TutorialSlide(
-      title: 'Welcome to Routine 24',
-      content: 'Plan your day with our interactive 24-hour clock interface.',
+      title: AppLocalizations.of(context)!.welcomeToRoutine,
+      content: AppLocalizations.of(context)!.planYourDay,
       imagePath: 'assets/animations/Logo.png',
     ),
     TutorialSlide(
-      title: 'Creating Time Slots',
-      content:
-          'Tap and drag on the clock to create time slots for your activities. The outer ring represents hours (0-23).',
+      title: AppLocalizations.of(context)!.creatingTimeSlots,
+      content: AppLocalizations.of(context)!.creatingTimeSlotsDesc,
       videoPath: 'assets/Slides/Slide2.mp4',
     ),
     TutorialSlide(
-      title: 'Managing Your Schedule',
-      content:
-          'Your time slots will appear with start and end times. Tap on existing slots to modify or delete them.',
+      title: AppLocalizations.of(context)!.managingYourSchedule,
+      content: AppLocalizations.of(context)!.managingYourScheduleDesc,
       videoPath: 'assets/Slides/Slide3.mp4',
     ),
     TutorialSlide(
-      title: 'Settings & Customization',
-      content:
-          'Tap the settings button in the top-right corner to access theme toggle, language options, and more customization features.',
+      title: AppLocalizations.of(context)!.settingsCustomization,
+      content: AppLocalizations.of(context)!.settingsCustomizationDesc,
       videoPath: 'assets/Slides/Slide4.mp4',
     ),
     TutorialSlide(
-      title: 'PRO Subscription Benefits',
-      content:
-          'Subscribe to PRO for \$6.99/year to unlock unlimited routine slots, ad-free experience, and premium features. Free users get 1 slot.',
+      title: AppLocalizations.of(context)!.proSubscriptionBenefits,
+      content: AppLocalizations.of(context)!.proSubscriptionBenefitsDesc,
       videoPath: 'assets/Slides/Slide5.mp4',
     ),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _closeAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+  }
+
+  @override
+  void dispose() {
+    _closeAnimationController.dispose();
+    super.dispose();
+  }
 
   void nextSlide() {
     if (currentSlide < totalSlides - 1) {
@@ -721,8 +486,15 @@ class _TutorialDialogState extends State<TutorialDialog> {
                   ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () => Navigator.of(context).pop(),
+                  icon: AnimatedIcon(
+                    icon: AnimatedIcons.close_menu,
+                    progress: _closeAnimationController,
+                  ),
+                  onPressed: () {
+                    _closeAnimationController.forward().then((_) {
+                      Navigator.of(context).pop();
+                    });
+                  },
                 ),
               ],
             ),
@@ -790,7 +562,7 @@ class _TutorialDialogState extends State<TutorialDialog> {
               children: [
                 TextButton(
                   onPressed: currentSlide > 0 ? previousSlide : null,
-                  child: const Text('Previous'),
+                  child: Text(AppLocalizations.of(context)!.previous),
                 ),
                 Text(
                   '${currentSlide + 1} / $totalSlides',
@@ -798,7 +570,7 @@ class _TutorialDialogState extends State<TutorialDialog> {
                 ),
                 TextButton(
                   onPressed: currentSlide < totalSlides - 1 ? nextSlide : null,
-                  child: Text(currentSlide < totalSlides - 1 ? 'Next' : ''),
+                  child: Text(currentSlide < totalSlides - 1 ? AppLocalizations.of(context)!.next : ''),
                 ),
               ],
             ),
@@ -816,7 +588,7 @@ class _TutorialDialogState extends State<TutorialDialog> {
                       borderRadius: BorderRadius.circular(8),
                     ),
                   ),
-                  child: const Text('Get Started'),
+                  child: Text(AppLocalizations.of(context)!.getStarted),
                 ),
               ),
           ],
@@ -1030,17 +802,27 @@ class HamburgerMenuDialog extends StatefulWidget {
   State<HamburgerMenuDialog> createState() => _HamburgerMenuDialogState();
 }
 
-class _HamburgerMenuDialogState extends State<HamburgerMenuDialog> {
+class _HamburgerMenuDialogState extends State<HamburgerMenuDialog> with TickerProviderStateMixin {
   late List<RoutineSlot> routineSlots;
   late RoutineSlot? activeSlot;
   bool isLoggedIn = false;
   String userEmail = '';
   final AuthService _authService = AuthService();
+  late AnimationController _editAnimationController;
+  late AnimationController _addAnimationController;
   UserModel? currentUser;
 
   @override
   void initState() {
     super.initState();
+    _editAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+    _addAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
     routineSlots = List.from(widget.routineSlots);
     activeSlot = widget.activeSlot;
     _checkAuthState();
@@ -1093,7 +875,7 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Routine Slots',
+                  AppLocalizations.of(context)!.routineSlots,
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
@@ -1162,10 +944,24 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog> {
             const SizedBox(height: 16),
             SizedBox(
               width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: (widget.isProUser || routineSlots.length < 2) ? _addNewSlot : null,
-                icon: const Icon(Icons.add),
-                label: Text('Add New Routine Slot'),
+              child: ElevatedButton(
+                onPressed: (widget.isProUser || routineSlots.length < 2) ? () {
+                  _addAnimationController.forward().then((_) {
+                    _addAnimationController.reverse();
+                  });
+                  _addNewSlot();
+                } : null,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    AnimatedIcon(
+                      icon: AnimatedIcons.add_event,
+                      progress: _addAnimationController,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(AppLocalizations.of(context)!.addNewRoutineSlot),
+                  ],
+                ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Theme.of(context).colorScheme.primary,
                   foregroundColor: Theme.of(context).colorScheme.onPrimary,
@@ -1205,13 +1001,13 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog> {
           child: slot.isActive ? const Icon(Icons.check, size: 16, color: Colors.white) : null,
         ),
         title: Text(
-          slot.name,
+          slot.name == 'Default Routine' ? AppLocalizations.of(context)!.defaultRoutine : slot.name,
           style: TextStyle(
             fontWeight: slot.isActive ? FontWeight.bold : FontWeight.normal,
           ),
         ),
         subtitle: Text(
-          slot.isActive ? 'Currently Active' : 'Tap to activate',
+          slot.isActive ? AppLocalizations.of(context)!.currentlyActive : AppLocalizations.of(context)!.tapToActivate,
           style: TextStyle(
             color: slot.isActive 
                 ? Theme.of(context).colorScheme.primary 
@@ -1323,7 +1119,7 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(AppLocalizations.of(context)!.cancel),
           ),
           ElevatedButton(
             onPressed: () {
@@ -1376,7 +1172,7 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(AppLocalizations.of(context)!.cancel),
           ),
           ElevatedButton(
             onPressed: () {
@@ -1407,7 +1203,7 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Upgrade to Pro'),
+        title: Text(AppLocalizations.of(context)!.upgradeToProButton),
         content: const Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1423,14 +1219,14 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Later'),
+            child: Text(AppLocalizations.of(context)!.later),
           ),
           ElevatedButton(
             onPressed: () {
               // TODO: Implement upgrade flow
               Navigator.pop(context);
             },
-            child: const Text('Upgrade Now'),
+            child: Text(AppLocalizations.of(context)!.upgradeNow),
           ),
         ],
       ),
@@ -1471,7 +1267,7 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
-                      widget.isProUser ? 'PRO MEMBER' : 'FREE USER',
+                      widget.isProUser ? AppLocalizations.of(context)!.proMember : AppLocalizations.of(context)!.freeUser,
                       style: TextStyle(
                         color: widget.isProUser ? Colors.black : Colors.white,
                         fontSize: 10,
@@ -1495,19 +1291,19 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog> {
               },
               itemBuilder: (context) => [
                 if (!widget.isProUser)
-                  const PopupMenuItem(
+                  PopupMenuItem(
                     value: 'upgrade',
                     child: ListTile(
-                      leading: Icon(Icons.star, size: 16, color: Colors.amber),
-                      title: Text('Upgrade to Pro'),
+                      leading: const Icon(Icons.star, size: 16, color: Colors.amber),
+                      title: Text(AppLocalizations.of(context)!.upgradeToProButton),
                       contentPadding: EdgeInsets.zero,
                     ),
                   ),
-                const PopupMenuItem(
+                PopupMenuItem(
                   value: 'logout',
                   child: ListTile(
-                    leading: Icon(Icons.logout, size: 16),
-                    title: Text('Logout'),
+                    leading: const Icon(Icons.logout, size: 16),
+                    title: Text(AppLocalizations.of(context)!.logout),
                     contentPadding: EdgeInsets.zero,
                   ),
                 ),
@@ -1527,7 +1323,7 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog> {
               const SizedBox(width: 4),
               Expanded(
                 child: Text(
-                  'Thank you for supporting Routine 24! Enjoy unlimited slots and ad-free experience.',
+                  AppLocalizations.of(context)!.thanksForSupporting,
                   style: TextStyle(
                     fontSize: 11,
                     color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
@@ -1555,7 +1351,7 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog> {
             ),
             const SizedBox(width: 8),
             Text(
-              'Sign in to sync your routines',
+              AppLocalizations.of(context)!.signInToSync,
               style: Theme.of(context).textTheme.titleSmall?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
@@ -1576,7 +1372,7 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog> {
                     borderRadius: BorderRadius.circular(8),
                   ),
                 ),
-                child: const Text('Sign In', style: TextStyle(fontSize: 12)),
+                child: Text(AppLocalizations.of(context)!.signIn, style: const TextStyle(fontSize: 12)),
               ),
             ),
             const SizedBox(width: 8),
@@ -1590,7 +1386,7 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog> {
                     borderRadius: BorderRadius.circular(8),
                   ),
                 ),
-                child: const Text('Sign Up', style: TextStyle(fontSize: 12)),
+                child: Text(AppLocalizations.of(context)!.signUp, style: const TextStyle(fontSize: 12)),
               ),
             ),
           ],
@@ -1608,7 +1404,7 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog> {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          title: const Text('Sign In'),
+          title: Text(AppLocalizations.of(context)!.signIn),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -1637,7 +1433,7 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog> {
                     }
                   },
                   icon: const Icon(Icons.login, color: Colors.white),
-                  label: const Text('Continue with Google'),
+                  label: Text(AppLocalizations.of(context)!.continueWithGoogle),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.red,
                     foregroundColor: Colors.white,
@@ -1645,46 +1441,28 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog> {
                   ),
                 ),
               ),
-              const SizedBox(height: 12),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: isLoading ? null : () async {
-                    setDialogState(() { isLoading = true; });
-                    try {
-                      await _authService.signInWithFacebook();
-                      await _updateAuthState();
-                      if (context.mounted) {
-                        Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Successfully signed in with Facebook!')),
-                        );
-                      }
-                    } catch (e) {
-                      setDialogState(() { isLoading = false; });
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Facebook sign in failed: ${e.toString()}')),
-                        );
-                      }
-                    }
-                  },
-                  icon: const Icon(Icons.facebook, color: Colors.white),
-                  label: const Text('Continue with Facebook'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                  ),
-                ),
-              ),
+              // Facebook login temporarily disabled - needs Facebook App ID configuration
+              // const SizedBox(height: 12),
+              // SizedBox(
+              //   width: double.infinity,
+              //   child: ElevatedButton.icon(
+              //     onPressed: null, // Disabled until Facebook App ID is configured
+              //     icon: const Icon(Icons.facebook, color: Colors.grey),
+              //     label: const Text('Facebook login (Coming Soon)'),
+              //     style: ElevatedButton.styleFrom(
+              //       backgroundColor: Colors.grey,
+              //       foregroundColor: Colors.white,
+              //       padding: const EdgeInsets.symmetric(vertical: 12),
+              //     ),
+              //   ),
+              // ),
               const SizedBox(height: 20),
               Row(
                 children: [
                   Expanded(child: Divider()),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Text('or', style: Theme.of(context).textTheme.bodySmall),
+                    child: Text(AppLocalizations.of(context)!.or, style: Theme.of(context).textTheme.bodySmall),
                   ),
                   Expanded(child: Divider()),
                 ],
@@ -1692,18 +1470,18 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog> {
               const SizedBox(height: 20),
               TextField(
                 controller: emailController,
-                decoration: const InputDecoration(
-                  labelText: 'Email',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: AppLocalizations.of(context)!.email,
+                  border: const OutlineInputBorder(),
                 ),
                 keyboardType: TextInputType.emailAddress,
               ),
               const SizedBox(height: 16),
               TextField(
                 controller: passwordController,
-                decoration: const InputDecoration(
-                  labelText: 'Password',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: AppLocalizations.of(context)!.password,
+                  border: const OutlineInputBorder(),
                 ),
                 obscureText: true,
               ),
@@ -1717,7 +1495,7 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog> {
           actions: [
             TextButton(
               onPressed: isLoading ? null : () => Navigator.pop(context),
-              child: const Text('Cancel'),
+              child: Text(AppLocalizations.of(context)!.cancel),
             ),
             ElevatedButton(
               onPressed: isLoading ? null : () async {
@@ -1750,7 +1528,7 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog> {
                   }
                 }
               },
-              child: const Text('Sign In with Email'),
+              child: Text(AppLocalizations.of(context)!.signInWithEmail),
             ),
           ],
         ),
@@ -1768,7 +1546,7 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog> {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          title: const Text('Sign Up'),
+          title: Text(AppLocalizations.of(context)!.signUp),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -1797,7 +1575,7 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog> {
                     }
                   },
                   icon: const Icon(Icons.login, color: Colors.white),
-                  label: const Text('Continue with Google'),
+                  label: Text(AppLocalizations.of(context)!.continueWithGoogle),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.red,
                     foregroundColor: Colors.white,
@@ -1805,46 +1583,28 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog> {
                   ),
                 ),
               ),
-              const SizedBox(height: 12),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: isLoading ? null : () async {
-                    setDialogState(() { isLoading = true; });
-                    try {
-                      await _authService.signInWithFacebook();
-                      await _updateAuthState();
-                      if (context.mounted) {
-                        Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Successfully signed up with Facebook!')),
-                        );
-                      }
-                    } catch (e) {
-                      setDialogState(() { isLoading = false; });
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Facebook sign up failed: ${e.toString()}')),
-                        );
-                      }
-                    }
-                  },
-                  icon: const Icon(Icons.facebook, color: Colors.white),
-                  label: const Text('Continue with Facebook'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                  ),
-                ),
-              ),
+              // Facebook login temporarily disabled - needs Facebook App ID configuration
+              // const SizedBox(height: 12),
+              // SizedBox(
+              //   width: double.infinity,
+              //   child: ElevatedButton.icon(
+              //     onPressed: null, // Disabled until Facebook App ID is configured
+              //     icon: const Icon(Icons.facebook, color: Colors.grey),
+              //     label: const Text('Facebook signup (Coming Soon)'),
+              //     style: ElevatedButton.styleFrom(
+              //       backgroundColor: Colors.grey,
+              //       foregroundColor: Colors.white,
+              //       padding: const EdgeInsets.symmetric(vertical: 12),
+              //     ),
+              //   ),
+              // ),
               const SizedBox(height: 20),
               Row(
                 children: [
                   Expanded(child: Divider()),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Text('or', style: Theme.of(context).textTheme.bodySmall),
+                    child: Text(AppLocalizations.of(context)!.or, style: Theme.of(context).textTheme.bodySmall),
                   ),
                   Expanded(child: Divider()),
                 ],
@@ -1852,27 +1612,27 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog> {
               const SizedBox(height: 20),
               TextField(
                 controller: emailController,
-                decoration: const InputDecoration(
-                  labelText: 'Email',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: AppLocalizations.of(context)!.email,
+                  border: const OutlineInputBorder(),
                 ),
                 keyboardType: TextInputType.emailAddress,
               ),
               const SizedBox(height: 16),
               TextField(
                 controller: passwordController,
-                decoration: const InputDecoration(
-                  labelText: 'Password',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: AppLocalizations.of(context)!.password,
+                  border: const OutlineInputBorder(),
                 ),
                 obscureText: true,
               ),
               const SizedBox(height: 16),
               TextField(
                 controller: confirmPasswordController,
-                decoration: const InputDecoration(
-                  labelText: 'Confirm Password',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: AppLocalizations.of(context)!.confirmPassword,
+                  border: const OutlineInputBorder(),
                 ),
                 obscureText: true,
               ),
@@ -1886,7 +1646,7 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog> {
           actions: [
             TextButton(
               onPressed: isLoading ? null : () => Navigator.pop(context),
-              child: const Text('Cancel'),
+              child: Text(AppLocalizations.of(context)!.cancel),
             ),
             ElevatedButton(
               onPressed: isLoading ? null : () async {
@@ -1933,7 +1693,7 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog> {
                   }
                 }
               },
-              child: const Text('Sign Up with Email'),
+              child: Text(AppLocalizations.of(context)!.signUpWithEmail),
             ),
           ],
         ),
@@ -1962,17 +1722,26 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog> {
       }
     }
   }
+
+  @override
+  void dispose() {
+    _editAnimationController.dispose();
+    _addAnimationController.dispose();
+    super.dispose();
+  }
 }
 
 
 class SettingsDialog extends StatefulWidget {
   final bool isDarkMode;
   final VoidCallback onThemeToggle;
+  final LanguageService languageService;
   
   const SettingsDialog({
     super.key,
     required this.isDarkMode,
     required this.onThemeToggle,
+    required this.languageService,
   });
 
   @override
@@ -1980,23 +1749,10 @@ class SettingsDialog extends StatefulWidget {
 }
 
 class _SettingsDialogState extends State<SettingsDialog> {
-  String selectedLanguage = 'English';
-  
-  final List<Language> supportedLanguages = [
-    Language(code: 'en', name: 'English', nativeName: 'English'),
-    Language(code: 'zh', name: 'Chinese', nativeName: '中文'),
-    Language(code: 'ko', name: 'Korean', nativeName: '한국어'),
-    Language(code: 'es', name: 'Spanish', nativeName: 'Español'),
-    Language(code: 'fr', name: 'French', nativeName: 'Français'),
-    Language(code: 'de', name: 'German', nativeName: 'Deutsch'),
-    Language(code: 'ja', name: 'Japanese', nativeName: '日本語'),
-    Language(code: 'pt', name: 'Portuguese', nativeName: 'Português'),
-    Language(code: 'ru', name: 'Russian', nativeName: 'Русский'),
-    Language(code: 'ar', name: 'Arabic', nativeName: 'العربية'),
-  ];
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Container(
@@ -2011,7 +1767,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Settings',
+                  l10n.settings,
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
@@ -2032,15 +1788,15 @@ class _SettingsDialogState extends State<SettingsDialog> {
                   children: [
                     // Theme Toggle Section
                     _buildSettingsSection(
-                      title: 'Appearance',
+                      title: l10n.appearance,
                       children: [
                         ListTile(
                           leading: Icon(
                             widget.isDarkMode ? Icons.dark_mode : Icons.light_mode,
                             color: Theme.of(context).colorScheme.primary,
                           ),
-                          title: const Text('Theme'),
-                          subtitle: Text(widget.isDarkMode ? 'Dark Mode' : 'Light Mode'),
+                          title: Text(l10n.theme),
+                          subtitle: Text(widget.isDarkMode ? l10n.darkMode : l10n.lightMode),
                           trailing: Switch(
                             value: widget.isDarkMode,
                             onChanged: (value) {
@@ -2057,17 +1813,17 @@ class _SettingsDialogState extends State<SettingsDialog> {
                     
                     // Language Section
                     _buildSettingsSection(
-                      title: 'Language',
+                      title: l10n.language,
                       children: [
                         ListTile(
                           leading: Icon(
                             Icons.language,
                             color: Theme.of(context).colorScheme.primary,
                           ),
-                          title: const Text('Language'),
-                          subtitle: Text(selectedLanguage),
+                          title: Text(l10n.language),
+                          subtitle: Text('${widget.languageService.getCurrentLanguageName()} (${widget.languageService.locale.languageCode})'),
                           trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                          onTap: _showLanguageSelector,
+                          onTap: () => _showLanguageSelector(l10n),
                         ),
                       ],
                     ),
@@ -2076,15 +1832,15 @@ class _SettingsDialogState extends State<SettingsDialog> {
                     
                     // Help & Support Section
                     _buildSettingsSection(
-                      title: 'Help & Support',
+                      title: l10n.helpAndSupport,
                       children: [
                         ListTile(
                           leading: Icon(
                             Icons.help_outline,
                             color: Theme.of(context).colorScheme.primary,
                           ),
-                          title: const Text('Tutorial'),
-                          subtitle: const Text('Learn how to use the app'),
+                          title: Text(l10n.tutorial),
+                          subtitle: Text(l10n.learnHowToUse),
                           trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                           onTap: () {
                             Navigator.of(context).pop();
@@ -2098,7 +1854,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
                     
                     // About Section
                     _buildSettingsSection(
-                      title: 'About',
+                      title: l10n.about,
                       children: [
                         Container(
                           width: double.infinity,
@@ -2113,11 +1869,11 @@ class _SettingsDialogState extends State<SettingsDialog> {
                               ),
                               const SizedBox(height: 8),
                               Text(
-                                'Developed By Kwanhoon Lee',
+                                l10n.developedBy,
                                 style: Theme.of(context).textTheme.bodySmall,
                               ),
                               Text(
-                                '© 2025 - Made For me and YOU',
+                                l10n.copyright,
                                 style: Theme.of(context).textTheme.bodySmall,
                               ),
                             ],
@@ -2165,33 +1921,34 @@ class _SettingsDialogState extends State<SettingsDialog> {
     );
   }
 
-  void _showLanguageSelector() {
+  void _showLanguageSelector(AppLocalizations l10n) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Select Language'),
+        title: Text(l10n.selectLanguage),
         content: SizedBox(
           width: double.maxFinite,
           height: 300,
           child: ListView.builder(
-            itemCount: supportedLanguages.length,
+            itemCount: widget.languageService.supportedLocales.length,
             itemBuilder: (context, index) {
-              final language = supportedLanguages[index];
-              final isSelected = language.name == selectedLanguage;
+              final locale = widget.languageService.supportedLocales[index];
+              final languageName = widget.languageService.getLanguageName(locale.languageCode);
+              final nativeName = widget.languageService.getNativeName(locale.languageCode);
+              final isSelected = locale == widget.languageService.locale;
               
               return ListTile(
-                title: Text(language.name),
-                subtitle: Text(language.nativeName),
+                title: Text(languageName),
+                subtitle: Text(nativeName),
                 trailing: isSelected ? const Icon(Icons.check, color: Colors.green) : null,
-                onTap: () {
-                  setState(() {
-                    selectedLanguage = language.name;
-                  });
-                  Navigator.pop(context);
-                  // TODO: Implement actual language change
-                  ScaffoldMessenger.of(context).showSnackBar(
+                onTap: () async {
+                  final navigator = Navigator.of(context);
+                  final messenger = ScaffoldMessenger.of(context);
+                  await widget.languageService.changeLanguage(locale);
+                  navigator.pop();
+                  messenger.showSnackBar(
                     SnackBar(
-                      content: Text('Language changed to ${language.name}'),
+                      content: Text('Language changed to $languageName'),
                       duration: const Duration(seconds: 2),
                     ),
                   );
@@ -2203,7 +1960,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(l10n.cancel),
           ),
         ],
       ),
@@ -2222,14 +1979,3 @@ class _SettingsDialogState extends State<SettingsDialog> {
 
 }
 
-class Language {
-  final String code;
-  final String name;
-  final String nativeName;
-
-  Language({
-    required this.code,
-    required this.name,
-    required this.nativeName,
-  });
-}
