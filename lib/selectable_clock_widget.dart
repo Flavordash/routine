@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
-import 'package:rive/rive.dart' hide LinearGradient;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
+import 'package:rive/rive.dart' as rive;
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'models/routine_slot_model.dart';
 import 'l10n/app_localizations.dart';
+import 'services/ad_service.dart';
 
 class TimeSlot {
   final String id;
@@ -130,16 +132,22 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget> with Tick
         timeSlots = widget.timeSlots.map(_routineTimeSlotToTimeSlot).toList();
       });
     }
+    
+    // Force rebuild when theme changes
+    if (oldWidget.isDarkMode != widget.isDarkMode) {
+      setState(() {
+        // This will trigger a rebuild with the correct Rive animation
+      });
+    }
   }
 
   Widget _buildBackgroundAnimation() {
-    // Always show the appropriate background circle
-    return RiveAnimation.asset(
+    return rive.RiveAnimation.asset(
       widget.isDarkMode
           ? 'assets/animations/circle_board.riv'
-          : 'assets/animations/circle light.riv',
+          : 'assets/animations/circle_light.riv',
+      key: ValueKey('rive_${widget.isDarkMode ? 'dark' : 'light'}'),
       fit: BoxFit.contain,
-      key: ValueKey(widget.isDarkMode ? 'dark_bg' : 'light_bg'),
     );
   }
 
@@ -474,8 +482,8 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget> with Tick
         existingSlot?.endHour ?? (endHour ?? (selectedStartHour + 1) % 24);
     int selectedEndMinute = existingSlot?.endMinute ?? 0;
 
-    // Ensure minute values are valid (0, 15, 30, or 45)
-    final validMinutes = [0, 15, 30, 45];
+    // Ensure minute values are valid (5-minute intervals)
+    final validMinutes = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55];
     if (!validMinutes.contains(selectedStartMinute)) selectedStartMinute = 0;
     if (!validMinutes.contains(selectedEndMinute)) selectedEndMinute = 0;
 
@@ -736,7 +744,7 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget> with Tick
                                       ),
                                     ),
                                   ),
-                                  items: [0, 15, 30, 45]
+                                  items: [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55]
                                       .map(
                                         (minute) => DropdownMenuItem(
                                           value: minute,
@@ -858,7 +866,7 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget> with Tick
                                       ),
                                     ),
                                   ),
-                                  items: [0, 15, 30, 45]
+                                  items: [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55]
                                       .map(
                                         (minute) => DropdownMenuItem(
                                           value: minute,
@@ -1400,11 +1408,17 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget> with Tick
   }
 
   Widget _buildAdBanner() {
+    // Initialize banner ad if not already done
+    if (AdService.instance.bannerAd == null) {
+      AdService.instance.createBannerAd();
+    }
+
     return Column(
       children: [
+        // Real AdMob Banner Ad
         Container(
-          width: double.infinity,
           height: 60,
+          width: double.infinity,
           decoration: BoxDecoration(
             color: Colors.white.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(8),
@@ -1413,27 +1427,28 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget> with Tick
               width: 1,
             ),
           ),
-          child: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.video_library_outlined,
-                  color: Colors.white.withValues(alpha: 0.7),
-                  size: 24,
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  AppLocalizations.of(context)!.advertisementSpace,
-                  style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.7),
-                    fontSize: 10,
-                    fontStyle: FontStyle.italic,
+          child: AdService.instance.bannerAd != null
+              ? AdWidget(ad: AdService.instance.bannerAd!)
+              : Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.ads_click,
+                        color: Colors.white.withValues(alpha: 0.7),
+                        size: 20,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Loading Ad...',
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.7),
+                          fontSize: 10,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ],
-            ),
-          ),
         ),
         const SizedBox(height: 8),
         Text(
@@ -1478,7 +1493,7 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget> with Tick
       endTime: '${timeSlot.endHour.toString().padLeft(2, '0')}:${timeSlot.endMinute.toString().padLeft(2, '0')}',
       label: timeSlot.title,
       description: timeSlot.description,
-      color: timeSlot.color.value,
+      color: timeSlot.color.toARGB32(),
       createdAt: DateTime.now(),
     );
   }

@@ -38,8 +38,6 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
   
-  # Rive animation package
-  rive: ^0.13.1
   
   # Local notifications
   flutter_local_notifications: ^17.2.3
@@ -52,13 +50,19 @@ dependencies:
   
   # Social Authentication
   google_sign_in: ^6.2.1
-  flutter_facebook_auth: ^7.1.1
   
   # Video player for tutorial slides
   video_player: ^2.8.2
   
   # Language preferences storage
   shared_preferences: ^2.2.2
+  
+  # Rive animations
+  rive: ^0.13.9
+  
+  # Monetization
+  google_mobile_ads: ^5.1.0
+  in_app_purchase: ^3.1.13
 
 dev_dependencies:
   flutter_test:

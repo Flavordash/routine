@@ -1,7 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -79,92 +78,11 @@ class AuthService {
     }
   }
 
-  Future<UserCredential?> signInWithFacebook() async {
-    try {
-      print('Starting Facebook Sign-In...');
-      
-      // Quick check if Facebook Auth is available and working
-      bool isFacebookConfigured = false;
-      try {
-        // Simple check to see if Facebook SDK is responsive
-        await FacebookAuth.instance.accessToken.timeout(Duration(seconds: 3));
-        isFacebookConfigured = true;
-      } catch (e) {
-        print('Facebook Auth not properly configured: $e');
-      }
-      
-      if (!isFacebookConfigured) {
-        throw Exception('Facebook login is currently unavailable. Please use email or Google login, or try again later.');
-      }
-      
-      // Add timeout to prevent getting stuck
-      final LoginResult loginResult = await FacebookAuth.instance.login(
-        permissions: ['email', 'public_profile'],
-        loginBehavior: LoginBehavior.nativeWithFallback,
-      ).timeout(
-        Duration(seconds: 15), // Reduced timeout for faster feedback
-        onTimeout: () {
-          print('Facebook login timeout');
-          throw Exception('Facebook login timed out. Please try again or contact support if this persists.');
-        },
-      );
-
-      print('Facebook login result status: ${loginResult.status}');
-      
-      if (loginResult.status == LoginStatus.success) {
-        if (loginResult.accessToken == null) {
-          print('Facebook login successful but no access token');
-          throw Exception('Facebook login failed: No access token received');
-        }
-        
-        print('Creating Facebook credential...');
-        final OAuthCredential facebookAuthCredential =
-            FacebookAuthProvider.credential(loginResult.accessToken!.tokenString);
-
-        print('Signing in to Firebase with Facebook credential...');
-        UserCredential result = await _auth.signInWithCredential(facebookAuthCredential).timeout(
-          Duration(seconds: 10),
-          onTimeout: () {
-            throw Exception('Firebase authentication timed out. Please try again.');
-          },
-        );
-        
-        // Create user document if it doesn't exist
-        if (result.user != null) {
-          await _createUserDocumentIfNotExists(result.user!);
-        }
-        
-        print('Facebook Sign-In completed successfully');
-        return result;
-      } else if (loginResult.status == LoginStatus.cancelled) {
-        print('Facebook login was cancelled by user');
-        return null;
-      } else if (loginResult.status == LoginStatus.failed) {
-        print('Facebook login failed with error: ${loginResult.message}');
-        throw Exception('Facebook login failed: ${loginResult.message ?? 'Authentication failed'}');
-      } else if (loginResult.status == LoginStatus.operationInProgress) {
-        print('Facebook login operation already in progress');
-        throw Exception('Facebook login is already in progress. Please wait or try again.');
-      } else {
-        print('Facebook login failed with status: ${loginResult.status}');
-        print('Facebook login error message: ${loginResult.message}');
-        throw Exception('Facebook login failed: ${loginResult.message ?? 'Unknown error'}');
-      }
-    } on Exception catch (e) {
-      print('Facebook sign in exception: $e');
-      rethrow;
-    } catch (error) {
-      print('Facebook sign in error: $error');
-      print('Error type: ${error.runtimeType}');
-      throw Exception('Facebook login failed: $error');
-    }
-  }
 
   Future<void> signOut() async {
     try {
       await _auth.signOut();
       await _googleSignIn.signOut();
-      await FacebookAuth.instance.logOut();
     } catch (error) {
       print('Sign out error: $error');
       rethrow;

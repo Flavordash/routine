@@ -2,14 +2,18 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart' as widgets;
 import 'package:flutter_localizations/flutter_localizations.dart';
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:video_player/video_player.dart';
+import 'package:rive/rive.dart';
 import 'selectable_clock_widget.dart';
 import 'services/auth_service.dart';
 import 'services/routine_slot_service.dart';
 import 'services/language_service.dart';
+import 'services/ad_service.dart';
+import 'services/subscription_service.dart';
 import 'models/user_model.dart';
 import 'models/routine_slot_model.dart';
 import 'firebase_options.dart';
@@ -17,9 +21,12 @@ import 'l10n/app_localizations.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  
+  // Initialize monetization services
+  await AdService.instance.initialize();
+  await SubscriptionService.instance.initialize();
+  
   runApp(const MyApp());
 }
 
@@ -43,7 +50,9 @@ class _MyAppState extends State<MyApp> {
   void _initializeLanguage() async {
     print('Initializing language...'); // Debug log
     await languageService.loadSavedLanguage();
-    print('Language loaded, current locale: ${languageService.locale}'); // Debug log
+    print(
+      'Language loaded, current locale: ${languageService.locale}',
+    ); // Debug log
     languageService.addListener(_onLanguageChanged);
     if (mounted) {
       setState(() {});
@@ -53,7 +62,9 @@ class _MyAppState extends State<MyApp> {
   void _onLanguageChanged() {
     if (mounted) {
       setState(() {
-        print('Language changed, rebuilding app with locale: ${languageService.locale}');
+        print(
+          'Language changed, rebuilding app with locale: ${languageService.locale}',
+        );
       });
     }
   }
@@ -180,8 +191,10 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
+  StateMachineController? _stateMachineController;
   bool isProUser = false;
   late AnimationController _menuAnimationController;
+  late AnimationController _settingsAnimationController;
   bool isLoggedIn = false;
   final AuthService _authService = AuthService();
   final RoutineSlotService _routineSlotService = RoutineSlotService();
@@ -196,6 +209,10 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
       duration: const Duration(milliseconds: 300),
       vsync: this,
     );
+    _settingsAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
     _checkAuthState();
     _loadRoutineSlots();
     _setupAuthStateListener();
@@ -203,6 +220,8 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
 
   void _setupAuthStateListener() {
     _authStateSubscription = _authService.authStateChanges.listen((User? user) {
+      print('Auth state changed - User: ${user?.email}, Current Pro status: $isProUser');
+      
       if (mounted) {
         setState(() {
           isLoggedIn = user != null;
@@ -210,12 +229,24 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
             isProUser = false;
             routineSlots = [];
             activeSlot = null;
+            print('User logged out - Pro status reset to false');
           }
         });
-        
+
         if (user != null) {
-          _loadUserData();
-          _loadRoutineSlots();
+          // Reset Pro status first, then load fresh data after delay
+          setState(() {
+            isProUser = false;
+          });
+          print('User logged in - Pro status temporarily reset to false');
+          
+          // Add delay to ensure Firebase user data is available
+          Future.delayed(const Duration(milliseconds: 1000), () {
+            if (mounted) {
+              _loadUserData();
+              _loadRoutineSlots();
+            }
+          });
         } else {
           _loadRoutineSlots();
         }
@@ -235,11 +266,15 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
 
   Future<void> _loadUserData() async {
     final userData = await _authService.getUserData();
-    if (userData != null) {
-      setState(() {
-        isProUser = userData['isPro'] ?? false;
-      });
-    }
+    final newProStatus = userData?['isPro'] ?? false;
+    print('Loading user data - Pro status: $newProStatus, UserData: $userData');
+    
+    setState(() {
+      // Always update isProUser, defaulting to false for new users or null data
+      isProUser = newProStatus;
+    });
+    
+    print('Pro status updated to: $isProUser');
   }
 
   Future<void> _loadRoutineSlots() async {
@@ -266,9 +301,9 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
     if (activeSlot != null) {
       setState(() {
         routineSlots = _routineSlotService.updateTimeSlots(
-          routineSlots, 
-          activeSlot!.id, 
-          timeSlots
+          routineSlots,
+          activeSlot!.id,
+          timeSlots,
         );
         activeSlot = _routineSlotService.getActiveSlot(routineSlots);
       });
@@ -277,19 +312,109 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
   }
 
 
+  void _initializeTriggerInputs(StateMachineController controller) {
+    // Try to find triggers with many possible names
+    final triggerNames = [
+      'toLight',
+      'light',
+      'lightMode',
+      'switchToLight',
+      'goLight',
+      'lightOn',
+      'toDark',
+      'dark',
+      'darkMode',
+      'switchToDark',
+      'goDark',
+      'darkOn',
+      'toggle',
+      'switch',
+      'change',
+      'flip',
+      'press',
+      'tap',
+      'click',
+    ];
 
+    SMITrigger? lightTrigger;
+    SMITrigger? darkTrigger;
+    SMITrigger? generalTrigger;
 
+    for (String name in triggerNames) {
+      final trigger = controller.findSMI(name) as SMITrigger?;
+      if (trigger != null) {
+        debugPrint('🎯 Found trigger: "${trigger.name}"');
 
+        // Categorize triggers by name
+        if (name.toLowerCase().contains('light')) {
+          lightTrigger = trigger;
+        } else if (name.toLowerCase().contains('dark')) {
+          darkTrigger = trigger;
+        } else {
+          generalTrigger = trigger; // toggle, switch, etc.
+        }
+      }
+    }
 
-  void _showTutorial(BuildContext context) {
-    showDialog(
-      context: context,
-      barrierDismissible: true,
-      builder: (BuildContext context) {
-        return const TutorialDialog();
-      },
-    );
+    // Fire appropriate trigger to SHOW current theme state (not switch to it)
+    if (widget.isDarkMode && darkTrigger != null) {
+      darkTrigger.fire();
+      debugPrint(
+        '✅ Dark trigger "${darkTrigger.name}" fired (showing dark theme: moon/star)',
+      );
+    } else if (!widget.isDarkMode && lightTrigger != null) {
+      lightTrigger.fire();
+      debugPrint(
+        '✅ Light trigger "${lightTrigger.name}" fired (showing light theme: sun/cloud)',
+      );
+    } else if (generalTrigger != null) {
+      // Use general toggle trigger if specific ones aren't found
+      generalTrigger.fire();
+      debugPrint('✅ General trigger "${generalTrigger.name}" fired');
+    } else {
+      debugPrint(
+        '❌ No suitable triggers found among: ${triggerNames.join(", ")}',
+      );
+    }
   }
+
+
+
+  @override
+  void didUpdateWidget(MyHomePage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    // Update animation when theme changes from parent
+    if (oldWidget.isDarkMode != widget.isDarkMode &&
+        _stateMachineController != null) {
+      _updateAnimationState();
+    }
+  }
+
+  void _updateAnimationState() {
+    if (_stateMachineController == null) return;
+
+    final boolInput =
+        _stateMachineController!.findInput<bool>('isDark') ??
+        _stateMachineController!.findInput<bool>('darkMode') ??
+        _stateMachineController!.findInput<bool>('isLightMode');
+
+    if (boolInput != null) {
+      // Set the correct value based on input name
+      if (boolInput.name.toLowerCase().contains('light')) {
+        boolInput.value = !widget.isDarkMode; // Light mode when NOT dark
+      } else {
+        boolInput.value = widget.isDarkMode; // Dark mode when IS dark
+      }
+      debugPrint(
+        'Navbar animation state updated - ${boolInput.name}: ${boolInput.value} (isDarkMode: ${widget.isDarkMode})',
+      );
+    } else {
+      // Use trigger inputs to update state
+      _initializeTriggerInputs(_stateMachineController!);
+    }
+  }
+
 
   void _showHamburgerMenu(BuildContext context) {
     showDialog(
@@ -343,6 +468,8 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
               icon: AnimatedIcons.menu_close,
               progress: _menuAnimationController,
             ),
+            splashColor: Colors.transparent,
+            highlightColor: Colors.transparent,
             onPressed: () {
               if (_menuAnimationController.isCompleted) {
                 _menuAnimationController.reverse();
@@ -358,6 +485,8 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
             margin: const EdgeInsets.only(right: 19.0),
             child: IconButton(
               icon: const Icon(Icons.settings),
+              splashColor: Colors.transparent,
+              highlightColor: Colors.transparent,
               onPressed: () {
                 _showSettings(context);
               },
@@ -365,20 +494,19 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            const SizedBox(height: 40),
-            SelectableClockWidget(
+      body: Column(
+        children: [
+          const SizedBox(height: 40),
+          Expanded(
+            child: SelectableClockWidget(
               isDarkMode: widget.isDarkMode,
               isProUser: isProUser,
               timeSlots: activeSlot?.timeSlots ?? [],
               onTimeSlotsChanged: _onTimeSlotsChanged,
             ),
-            const SizedBox(height: 30),
-            const SizedBox(height: 20),
-          ],
-        ),
+          ),
+          const SizedBox(height: 20),
+        ],
       ),
     );
   }
@@ -386,6 +514,7 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
   @override
   void dispose() {
     _menuAnimationController.dispose();
+    _settingsAnimationController.dispose();
     _authStateSubscription?.cancel();
     super.dispose();
   }
@@ -398,7 +527,8 @@ class TutorialDialog extends StatefulWidget {
   State<TutorialDialog> createState() => _TutorialDialogState();
 }
 
-class _TutorialDialogState extends State<TutorialDialog> with TickerProviderStateMixin {
+class _TutorialDialogState extends State<TutorialDialog>
+    with TickerProviderStateMixin {
   int currentSlide = 0;
   final int totalSlides = 5;
   late AnimationController _closeAnimationController;
@@ -533,9 +663,7 @@ class _TutorialDialogState extends State<TutorialDialog> with TickerProviderStat
                         maxHeight: 300,
                         minHeight: 250,
                       ),
-                      child: SlideMediaWidget(
-                        slideData: currentSlideData,
-                      ),
+                      child: SlideMediaWidget(slideData: currentSlideData),
                     ),
                   ),
                   const SizedBox(height: 30),
@@ -570,7 +698,11 @@ class _TutorialDialogState extends State<TutorialDialog> with TickerProviderStat
                 ),
                 TextButton(
                   onPressed: currentSlide < totalSlides - 1 ? nextSlide : null,
-                  child: Text(currentSlide < totalSlides - 1 ? AppLocalizations.of(context)!.next : ''),
+                  child: Text(
+                    currentSlide < totalSlides - 1
+                        ? AppLocalizations.of(context)!.next
+                        : '',
+                  ),
                 ),
               ],
             ),
@@ -617,10 +749,7 @@ class TutorialSlide {
 class SlideMediaWidget extends StatefulWidget {
   final TutorialSlide slideData;
 
-  const SlideMediaWidget({
-    super.key,
-    required this.slideData,
-  });
+  const SlideMediaWidget({super.key, required this.slideData});
 
   @override
   State<SlideMediaWidget> createState() => _SlideMediaWidgetState();
@@ -654,11 +783,13 @@ class _SlideMediaWidgetState extends State<SlideMediaWidget> {
 
   Future<void> _initializeVideo() async {
     try {
-      _videoController = VideoPlayerController.asset(widget.slideData.videoPath!);
+      _videoController = VideoPlayerController.asset(
+        widget.slideData.videoPath!,
+      );
       await _videoController!.initialize();
       _videoController!.setLooping(true);
       _videoController!.play();
-      
+
       if (mounted) {
         setState(() {
           _isVideoInitialized = true;
@@ -691,7 +822,9 @@ class _SlideMediaWidgetState extends State<SlideMediaWidget> {
   @override
   Widget build(BuildContext context) {
     // If video is available and initialized, show video
-    if (widget.slideData.videoPath != null && _isVideoInitialized && _videoController != null) {
+    if (widget.slideData.videoPath != null &&
+        _isVideoInitialized &&
+        _videoController != null) {
       return Expanded(
         child: Container(
           width: double.infinity,
@@ -713,9 +846,10 @@ class _SlideMediaWidgetState extends State<SlideMediaWidget> {
         ),
       );
     }
-    
+
     // If video failed and we have a fallback image, show image
-    if ((_hasVideoError || widget.slideData.videoPath == null) && widget.slideData.imagePath != null) {
+    if ((_hasVideoError || widget.slideData.videoPath == null) &&
+        widget.slideData.imagePath != null) {
       return Expanded(
         child: Container(
           width: double.infinity,
@@ -736,7 +870,7 @@ class _SlideMediaWidgetState extends State<SlideMediaWidget> {
         ),
       );
     }
-    
+
     // If no video or image, show icon or placeholder
     return _buildIconFallback();
   }
@@ -760,7 +894,7 @@ class _SlideMediaWidgetState extends State<SlideMediaWidget> {
         ),
       );
     }
-    
+
     return Expanded(
       child: Container(
         width: double.infinity,
@@ -772,10 +906,7 @@ class _SlideMediaWidgetState extends State<SlideMediaWidget> {
           ),
         ),
         child: const Center(
-          child: Text(
-            'Media not found',
-            style: TextStyle(color: Colors.grey),
-          ),
+          child: Text('Media not found', style: TextStyle(color: Colors.grey)),
         ),
       ),
     );
@@ -802,7 +933,8 @@ class HamburgerMenuDialog extends StatefulWidget {
   State<HamburgerMenuDialog> createState() => _HamburgerMenuDialogState();
 }
 
-class _HamburgerMenuDialogState extends State<HamburgerMenuDialog> with TickerProviderStateMixin {
+class _HamburgerMenuDialogState extends State<HamburgerMenuDialog>
+    with TickerProviderStateMixin {
   late List<RoutineSlot> routineSlots;
   late RoutineSlot? activeSlot;
   bool isLoggedIn = false;
@@ -876,9 +1008,9 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog> with TickerPr
               children: [
                 Text(
                   AppLocalizations.of(context)!.routineSlots,
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
                 ),
                 IconButton(
                   icon: const Icon(Icons.close),
@@ -887,25 +1019,32 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog> with TickerPr
               ],
             ),
             const SizedBox(height: 20),
-            
+
             // Authentication Section
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                color: Theme.of(
+                  context,
+                ).colorScheme.primary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.primary.withValues(alpha: 0.2),
                 ),
               ),
               child: isLoggedIn ? _buildUserProfile() : _buildLoginPrompt(),
             ),
             const SizedBox(height: 16),
-            
+
             // Pro status indicator
             if (!widget.isProUser)
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.orange.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
@@ -913,7 +1052,11 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog> with TickerPr
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.star_outline, color: Colors.orange, size: 20),
+                    const Icon(
+                      Icons.star_outline,
+                      color: Colors.orange,
+                      size: 20,
+                    ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
@@ -945,12 +1088,22 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog> with TickerPr
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: (widget.isProUser || routineSlots.length < 2) ? () {
-                  _addAnimationController.forward().then((_) {
-                    _addAnimationController.reverse();
-                  });
-                  _addNewSlot();
-                } : null,
+                onPressed: (widget.isProUser || routineSlots.length < 2)
+                    ? () {
+                        _addAnimationController.forward().then((_) {
+                          _addAnimationController.reverse();
+                        });
+                        _addNewSlot();
+                      }
+                    : null,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Theme.of(context).colorScheme.primary,
+                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -962,17 +1115,9 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog> with TickerPr
                     Text(AppLocalizations.of(context)!.addNewRoutineSlot),
                   ],
                 ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(context).colorScheme.primary,
-                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
               ),
             ),
-            
+
             if (!widget.isProUser && routineSlots.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(top: 8),
@@ -993,25 +1138,37 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog> with TickerPr
   Widget _buildRoutineSlotCard(RoutineSlot slot) {
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
-      color: slot.isActive ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.1) : null,
+      color: slot.isActive
+          ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.1)
+          : null,
       child: ListTile(
         leading: CircleAvatar(
-          backgroundColor: slot.isActive ? Theme.of(context).colorScheme.primary : Colors.grey,
+          backgroundColor: slot.isActive
+              ? Theme.of(context).colorScheme.primary
+              : Colors.grey,
           radius: 12,
-          child: slot.isActive ? const Icon(Icons.check, size: 16, color: Colors.white) : null,
+          child: slot.isActive
+              ? const Icon(Icons.check, size: 16, color: Colors.white)
+              : null,
         ),
         title: Text(
-          slot.name == 'Default Routine' ? AppLocalizations.of(context)!.defaultRoutine : slot.name,
+          slot.name == 'Default Routine'
+              ? AppLocalizations.of(context)!.defaultRoutine
+              : slot.name,
           style: TextStyle(
             fontWeight: slot.isActive ? FontWeight.bold : FontWeight.normal,
           ),
         ),
         subtitle: Text(
-          slot.isActive ? AppLocalizations.of(context)!.currentlyActive : AppLocalizations.of(context)!.tapToActivate,
+          slot.isActive
+              ? AppLocalizations.of(context)!.currentlyActive
+              : AppLocalizations.of(context)!.tapToActivate,
           style: TextStyle(
-            color: slot.isActive 
-                ? Theme.of(context).colorScheme.primary 
-                : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+            color: slot.isActive
+                ? Theme.of(context).colorScheme.primary
+                : Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.6),
             fontSize: 12,
           ),
         ),
@@ -1057,7 +1214,10 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog> with TickerPr
                     value: 'delete',
                     child: ListTile(
                       leading: Icon(Icons.delete, size: 16, color: Colors.red),
-                      title: Text('Delete', style: TextStyle(color: Colors.red)),
+                      title: Text(
+                        'Delete',
+                        style: TextStyle(color: Colors.red),
+                      ),
                       contentPadding: EdgeInsets.zero,
                     ),
                   ),
@@ -1075,18 +1235,18 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog> with TickerPr
   }
 
   void _addNewSlot() {
-    if (!widget.isProUser && routineSlots.length >= 1) {
+    if (!widget.isProUser && routineSlots.isNotEmpty) {
       _showUpgradeDialog();
       return;
     }
-    
+
     final newSlot = RoutineSlot(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       name: 'Routine ${routineSlots.length + 1}',
       isActive: false,
       isPaid: !widget.isProUser ? false : true,
     );
-    
+
     setState(() {
       routineSlots.add(newSlot);
     });
@@ -1094,17 +1254,20 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog> with TickerPr
 
   void _activateSlot(RoutineSlot slot) {
     setState(() {
-      routineSlots = widget.routineSlotService.activateSlot(routineSlots, slot.id);
+      routineSlots = widget.routineSlotService.activateSlot(
+        routineSlots,
+        slot.id,
+      );
       activeSlot = widget.routineSlotService.getActiveSlot(routineSlots);
     });
-    
+
     widget.onSlotsChanged(routineSlots, activeSlot);
     Navigator.of(context).pop();
   }
 
   void _renameSlot(RoutineSlot slot) {
     final controller = TextEditingController(text: slot.name);
-    
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -1148,14 +1311,14 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog> with TickerPr
       _showUpgradeDialog();
       return;
     }
-    
+
     final newSlot = RoutineSlot(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       name: '${slot.name} (Copy)',
       isActive: false,
       isPaid: true,
     );
-    
+
     setState(() {
       routineSlots.add(newSlot);
     });
@@ -1163,7 +1326,7 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog> with TickerPr
 
   void _deleteSlot(RoutineSlot slot) {
     if (routineSlots.length <= 1) return;
-    
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -1178,7 +1341,7 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog> with TickerPr
             onPressed: () {
               setState(() {
                 routineSlots.remove(slot);
-                
+
                 // If the deleted slot was active, activate the first remaining slot
                 if (slot.isActive && routineSlots.isNotEmpty) {
                   routineSlots[0] = RoutineSlot(
@@ -1223,8 +1386,8 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog> with TickerPr
           ),
           ElevatedButton(
             onPressed: () {
-              // TODO: Implement upgrade flow
               Navigator.pop(context);
+              _showSubscriptionDialog();
             },
             child: Text(AppLocalizations.of(context)!.upgradeNow),
           ),
@@ -1261,13 +1424,18 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog> with TickerPr
                   ),
                   const SizedBox(height: 2),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
                     decoration: BoxDecoration(
                       color: widget.isProUser ? Colors.amber : Colors.grey,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
-                      widget.isProUser ? AppLocalizations.of(context)!.proMember : AppLocalizations.of(context)!.freeUser,
+                      widget.isProUser
+                          ? AppLocalizations.of(context)!.proMember
+                          : AppLocalizations.of(context)!.freeUser,
                       style: TextStyle(
                         color: widget.isProUser ? Colors.black : Colors.white,
                         fontSize: 10,
@@ -1294,8 +1462,14 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog> with TickerPr
                   PopupMenuItem(
                     value: 'upgrade',
                     child: ListTile(
-                      leading: const Icon(Icons.star, size: 16, color: Colors.amber),
-                      title: Text(AppLocalizations.of(context)!.upgradeToProButton),
+                      leading: const Icon(
+                        Icons.star,
+                        size: 16,
+                        color: Colors.amber,
+                      ),
+                      title: Text(
+                        AppLocalizations.of(context)!.upgradeToProButton,
+                      ),
                       contentPadding: EdgeInsets.zero,
                     ),
                   ),
@@ -1315,18 +1489,16 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog> with TickerPr
           const SizedBox(height: 8),
           Row(
             children: [
-              Icon(
-                Icons.star,
-                color: Colors.amber,
-                size: 14,
-              ),
+              Icon(Icons.star, color: Colors.amber, size: 14),
               const SizedBox(width: 4),
               Expanded(
                 child: Text(
                   AppLocalizations.of(context)!.thanksForSupporting,
                   style: TextStyle(
                     fontSize: 11,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.7),
                     fontStyle: FontStyle.italic,
                   ),
                 ),
@@ -1352,9 +1524,9 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog> with TickerPr
             const SizedBox(width: 8),
             Text(
               AppLocalizations.of(context)!.signInToSync,
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
             ),
           ],
         ),
@@ -1372,7 +1544,10 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog> with TickerPr
                     borderRadius: BorderRadius.circular(8),
                   ),
                 ),
-                child: Text(AppLocalizations.of(context)!.signIn, style: const TextStyle(fontSize: 12)),
+                child: Text(
+                  AppLocalizations.of(context)!.signIn,
+                  style: const TextStyle(fontSize: 12),
+                ),
               ),
             ),
             const SizedBox(width: 8),
@@ -1386,7 +1561,10 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog> with TickerPr
                     borderRadius: BorderRadius.circular(8),
                   ),
                 ),
-                child: Text(AppLocalizations.of(context)!.signUp, style: const TextStyle(fontSize: 12)),
+                child: Text(
+                  AppLocalizations.of(context)!.signUp,
+                  style: const TextStyle(fontSize: 12),
+                ),
               ),
             ),
           ],
@@ -1399,7 +1577,7 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog> with TickerPr
     final emailController = TextEditingController();
     final passwordController = TextEditingController();
     bool isLoading = false;
-    
+
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
@@ -1412,26 +1590,40 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog> with TickerPr
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
-                  onPressed: isLoading ? null : () async {
-                    setDialogState(() { isLoading = true; });
-                    try {
-                      await _authService.signInWithGoogle();
-                      await _updateAuthState();
-                      if (context.mounted) {
-                        Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Successfully signed in with Google!')),
-                        );
-                      }
-                    } catch (e) {
-                      setDialogState(() { isLoading = false; });
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Google sign in failed: ${e.toString()}')),
-                        );
-                      }
-                    }
-                  },
+                  onPressed: isLoading
+                      ? null
+                      : () async {
+                          setDialogState(() {
+                            isLoading = true;
+                          });
+                          try {
+                            await _authService.signInWithGoogle();
+                            await _updateAuthState();
+                            if (context.mounted) {
+                              Navigator.pop(context);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Successfully signed in with Google!',
+                                  ),
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            setDialogState(() {
+                              isLoading = false;
+                            });
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    'Google sign in failed: ${e.toString()}',
+                                  ),
+                                ),
+                              );
+                            }
+                          }
+                        },
                   icon: const Icon(Icons.login, color: Colors.white),
                   label: Text(AppLocalizations.of(context)!.continueWithGoogle),
                   style: ElevatedButton.styleFrom(
@@ -1441,28 +1633,16 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog> with TickerPr
                   ),
                 ),
               ),
-              // Facebook login temporarily disabled - needs Facebook App ID configuration
-              // const SizedBox(height: 12),
-              // SizedBox(
-              //   width: double.infinity,
-              //   child: ElevatedButton.icon(
-              //     onPressed: null, // Disabled until Facebook App ID is configured
-              //     icon: const Icon(Icons.facebook, color: Colors.grey),
-              //     label: const Text('Facebook login (Coming Soon)'),
-              //     style: ElevatedButton.styleFrom(
-              //       backgroundColor: Colors.grey,
-              //       foregroundColor: Colors.white,
-              //       padding: const EdgeInsets.symmetric(vertical: 12),
-              //     ),
-              //   ),
-              // ),
               const SizedBox(height: 20),
               Row(
                 children: [
                   Expanded(child: Divider()),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Text(AppLocalizations.of(context)!.or, style: Theme.of(context).textTheme.bodySmall),
+                    child: Text(
+                      AppLocalizations.of(context)!.or,
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
                   ),
                   Expanded(child: Divider()),
                 ],
@@ -1485,7 +1665,7 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog> with TickerPr
                 ),
                 obscureText: true,
               ),
-              if (isLoading) 
+              if (isLoading)
                 const Padding(
                   padding: EdgeInsets.only(top: 16),
                   child: CircularProgressIndicator(),
@@ -1498,36 +1678,42 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog> with TickerPr
               child: Text(AppLocalizations.of(context)!.cancel),
             ),
             ElevatedButton(
-              onPressed: isLoading ? null : () async {
-                setDialogState(() {
-                  isLoading = true;
-                });
-                
-                try {
-                  await _authService.signInWithEmailAndPassword(
-                    emailController.text.trim(),
-                    passwordController.text,
-                  );
-                  
-                  await _updateAuthState();
-                  if (context.mounted) {
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Successfully signed in!')),
-                    );
-                  }
-                } catch (e) {
-                  setDialogState(() {
-                    isLoading = false;
-                  });
-                  
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Sign in failed: ${e.toString()}')),
-                    );
-                  }
-                }
-              },
+              onPressed: isLoading
+                  ? null
+                  : () async {
+                      setDialogState(() {
+                        isLoading = true;
+                      });
+
+                      try {
+                        await _authService.signInWithEmailAndPassword(
+                          emailController.text.trim(),
+                          passwordController.text,
+                        );
+
+                        await _updateAuthState();
+                        if (context.mounted) {
+                          Navigator.pop(context);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Successfully signed in!'),
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        setDialogState(() {
+                          isLoading = false;
+                        });
+
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Sign in failed: ${e.toString()}'),
+                            ),
+                          );
+                        }
+                      }
+                    },
               child: Text(AppLocalizations.of(context)!.signInWithEmail),
             ),
           ],
@@ -1541,7 +1727,7 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog> with TickerPr
     final passwordController = TextEditingController();
     final confirmPasswordController = TextEditingController();
     bool isLoading = false;
-    
+
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
@@ -1554,26 +1740,40 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog> with TickerPr
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
-                  onPressed: isLoading ? null : () async {
-                    setDialogState(() { isLoading = true; });
-                    try {
-                      await _authService.signInWithGoogle();
-                      await _updateAuthState();
-                      if (context.mounted) {
-                        Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Successfully signed up with Google!')),
-                        );
-                      }
-                    } catch (e) {
-                      setDialogState(() { isLoading = false; });
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Google sign up failed: ${e.toString()}')),
-                        );
-                      }
-                    }
-                  },
+                  onPressed: isLoading
+                      ? null
+                      : () async {
+                          setDialogState(() {
+                            isLoading = true;
+                          });
+                          try {
+                            await _authService.signInWithGoogle();
+                            await _updateAuthState();
+                            if (context.mounted) {
+                              Navigator.pop(context);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Successfully signed up with Google!',
+                                  ),
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            setDialogState(() {
+                              isLoading = false;
+                            });
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    'Google sign up failed: ${e.toString()}',
+                                  ),
+                                ),
+                              );
+                            }
+                          }
+                        },
                   icon: const Icon(Icons.login, color: Colors.white),
                   label: Text(AppLocalizations.of(context)!.continueWithGoogle),
                   style: ElevatedButton.styleFrom(
@@ -1583,28 +1783,16 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog> with TickerPr
                   ),
                 ),
               ),
-              // Facebook login temporarily disabled - needs Facebook App ID configuration
-              // const SizedBox(height: 12),
-              // SizedBox(
-              //   width: double.infinity,
-              //   child: ElevatedButton.icon(
-              //     onPressed: null, // Disabled until Facebook App ID is configured
-              //     icon: const Icon(Icons.facebook, color: Colors.grey),
-              //     label: const Text('Facebook signup (Coming Soon)'),
-              //     style: ElevatedButton.styleFrom(
-              //       backgroundColor: Colors.grey,
-              //       foregroundColor: Colors.white,
-              //       padding: const EdgeInsets.symmetric(vertical: 12),
-              //     ),
-              //   ),
-              // ),
               const SizedBox(height: 20),
               Row(
                 children: [
                   Expanded(child: Divider()),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Text(AppLocalizations.of(context)!.or, style: Theme.of(context).textTheme.bodySmall),
+                    child: Text(
+                      AppLocalizations.of(context)!.or,
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
                   ),
                   Expanded(child: Divider()),
                 ],
@@ -1636,7 +1824,7 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog> with TickerPr
                 ),
                 obscureText: true,
               ),
-              if (isLoading) 
+              if (isLoading)
                 const Padding(
                   padding: EdgeInsets.only(top: 16),
                   child: CircularProgressIndicator(),
@@ -1649,50 +1837,65 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog> with TickerPr
               child: Text(AppLocalizations.of(context)!.cancel),
             ),
             ElevatedButton(
-              onPressed: isLoading ? null : () async {
-                if (passwordController.text != confirmPasswordController.text) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Passwords do not match')),
-                  );
-                  return;
-                }
-                
-                if (passwordController.text.length < 6) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Password must be at least 6 characters')),
-                  );
-                  return;
-                }
-                
-                setDialogState(() {
-                  isLoading = true;
-                });
-                
-                try {
-                  await _authService.registerWithEmailAndPassword(
-                    emailController.text.trim(),
-                    passwordController.text,
-                  );
-                  
-                  await _updateAuthState();
-                  if (context.mounted) {
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Account created successfully!')),
-                    );
-                  }
-                } catch (e) {
-                  setDialogState(() {
-                    isLoading = false;
-                  });
-                  
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Registration failed: ${e.toString()}')),
-                    );
-                  }
-                }
-              },
+              onPressed: isLoading
+                  ? null
+                  : () async {
+                      if (passwordController.text !=
+                          confirmPasswordController.text) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Passwords do not match'),
+                          ),
+                        );
+                        return;
+                      }
+
+                      if (passwordController.text.length < 6) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'Password must be at least 6 characters',
+                            ),
+                          ),
+                        );
+                        return;
+                      }
+
+                      setDialogState(() {
+                        isLoading = true;
+                      });
+
+                      try {
+                        await _authService.registerWithEmailAndPassword(
+                          emailController.text.trim(),
+                          passwordController.text,
+                        );
+
+                        await _updateAuthState();
+                        if (context.mounted) {
+                          Navigator.pop(context);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Account created successfully!'),
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        setDialogState(() {
+                          isLoading = false;
+                        });
+
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                'Registration failed: ${e.toString()}',
+                              ),
+                            ),
+                          );
+                        }
+                      }
+                    },
               child: Text(AppLocalizations.of(context)!.signUpWithEmail),
             ),
           ],
@@ -1723,6 +1926,315 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog> with TickerPr
     }
   }
 
+  void _showSubscriptionDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: Theme.of(context).colorScheme.surface,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: BorderSide(
+              color: Theme.of(context).colorScheme.onSurface,
+              width: 1,
+            ),
+          ),
+          title: Row(
+            children: [
+              Icon(
+                Icons.star,
+                color: Colors.amber,
+                size: 24,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Upgrade to Pro',
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Get unlimited access and remove ads!',
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface,
+                    fontSize: 16,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                
+                // Pro Features List
+                _buildProFeature(context, Icons.block, 'Remove all advertisements'),
+                _buildProFeature(context, Icons.all_inclusive, 'Unlimited time slots'),
+                _buildProFeature(context, Icons.notifications_active, 'Advanced notifications'),
+                _buildProFeature(context, Icons.backup, 'Cloud sync backup'),
+                _buildProFeature(context, Icons.support, 'Priority support'),
+                
+                const SizedBox(height: 20),
+                
+                // Subscription Options
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.amber.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.amber, width: 2),
+                  ),
+                  child: Column(
+                    children: [
+                      Text(
+                        'Choose Your Plan',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      
+                      // Monthly Plan
+                      _buildSubscriptionOption(
+                        context,
+                        title: 'Monthly Plan',
+                        price: '\$4.99/month',
+                        savings: null,
+                        isPopular: false,
+                        onTap: () => _purchaseSubscription(monthly: true),
+                      ),
+                      
+                      const SizedBox(height: 8),
+                      
+                      // Yearly Plan  
+                      _buildSubscriptionOption(
+                        context,
+                        title: 'Yearly Plan',
+                        price: '\$6.99/year',
+                        savings: 'Save 88%!',
+                        isPopular: true,
+                        onTap: () => _purchaseSubscription(monthly: false),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(
+                'Maybe Later',
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                _restorePurchases();
+              },
+              child: Text(
+                'Restore',
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildProFeature(BuildContext context, IconData icon, String text) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Icon(
+            icon,
+            size: 20,
+            color: Colors.green,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurface,
+                fontSize: 14,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSubscriptionOption(
+    BuildContext context, {
+    required String title,
+    required String price,
+    String? savings,
+    required bool isPopular,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: isPopular 
+            ? Colors.amber.withValues(alpha: 0.2)
+            : Theme.of(context).colorScheme.surface,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isPopular ? Colors.amber : Colors.grey,
+            width: isPopular ? 2 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            if (isPopular)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.amber,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  'POPULAR',
+                  style: TextStyle(
+                    color: Colors.black,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            if (isPopular) const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                  ),
+                  Text(
+                    price,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurface,
+                      fontSize: 14,
+                    ),
+                  ),
+                  if (savings != null)
+                    Text(
+                      savings,
+                      style: TextStyle(
+                        color: Colors.green,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.arrow_forward_ios,
+              size: 16,
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _purchaseSubscription({required bool monthly}) {
+    Navigator.of(context).pop();
+    
+    // Show loading
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircularProgressIndicator(),
+            const SizedBox(height: 16),
+            Text(
+              'Processing purchase...',
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    // Attempt purchase
+    SubscriptionService.instance.purchaseSubscription(yearly: !monthly).then((_) {
+      if (mounted) {
+        Navigator.of(context).pop(); // Close loading dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Welcome to Pro! 🎉'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    }).catchError((error) {
+      if (mounted) {
+        Navigator.of(context).pop(); // Close loading dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Purchase failed: $error'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    });
+  }
+
+  void _restorePurchases() {
+    Navigator.of(context).pop();
+    
+    SubscriptionService.instance.restorePurchases().then((_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Purchases restored successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    }).catchError((error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Restore failed: $error'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    });
+  }
+
   @override
   void dispose() {
     _editAnimationController.dispose();
@@ -1731,12 +2243,11 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog> with TickerPr
   }
 }
 
-
 class SettingsDialog extends StatefulWidget {
   final bool isDarkMode;
   final VoidCallback onThemeToggle;
   final LanguageService languageService;
-  
+
   const SettingsDialog({
     super.key,
     required this.isDarkMode,
@@ -1749,7 +2260,6 @@ class SettingsDialog extends StatefulWidget {
 }
 
 class _SettingsDialogState extends State<SettingsDialog> {
-
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -1768,9 +2278,9 @@ class _SettingsDialogState extends State<SettingsDialog> {
               children: [
                 Text(
                   l10n.settings,
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
                 ),
                 IconButton(
                   icon: const Icon(Icons.close),
@@ -1792,25 +2302,33 @@ class _SettingsDialogState extends State<SettingsDialog> {
                       children: [
                         ListTile(
                           leading: Icon(
-                            widget.isDarkMode ? Icons.dark_mode : Icons.light_mode,
+                            widget.isDarkMode
+                                ? Icons.dark_mode
+                                : Icons.light_mode,
                             color: Theme.of(context).colorScheme.primary,
                           ),
                           title: Text(l10n.theme),
-                          subtitle: Text(widget.isDarkMode ? l10n.darkMode : l10n.lightMode),
+                          subtitle: Text(
+                            widget.isDarkMode ? l10n.darkMode : l10n.lightMode,
+                          ),
                           trailing: Switch(
                             value: widget.isDarkMode,
                             onChanged: (value) {
                               widget.onThemeToggle();
                             },
-                            activeThumbColor: Theme.of(context).colorScheme.onSurface,
-                            activeTrackColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
+                            activeThumbColor: Theme.of(
+                              context,
+                            ).colorScheme.onSurface,
+                            activeTrackColor: Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withValues(alpha: 0.3),
                           ),
                         ),
                       ],
                     ),
-                    
+
                     const SizedBox(height: 24),
-                    
+
                     // Language Section
                     _buildSettingsSection(
                       title: l10n.language,
@@ -1821,15 +2339,20 @@ class _SettingsDialogState extends State<SettingsDialog> {
                             color: Theme.of(context).colorScheme.primary,
                           ),
                           title: Text(l10n.language),
-                          subtitle: Text('${widget.languageService.getCurrentLanguageName()} (${widget.languageService.locale.languageCode})'),
-                          trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                          subtitle: Text(
+                            '${widget.languageService.getCurrentLanguageName()} (${widget.languageService.locale.languageCode})',
+                          ),
+                          trailing: const Icon(
+                            Icons.arrow_forward_ios,
+                            size: 16,
+                          ),
                           onTap: () => _showLanguageSelector(l10n),
                         ),
                       ],
                     ),
-                    
+
                     const SizedBox(height: 24),
-                    
+
                     // Help & Support Section
                     _buildSettingsSection(
                       title: l10n.helpAndSupport,
@@ -1841,7 +2364,10 @@ class _SettingsDialogState extends State<SettingsDialog> {
                           ),
                           title: Text(l10n.tutorial),
                           subtitle: Text(l10n.learnHowToUse),
-                          trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                          trailing: const Icon(
+                            Icons.arrow_forward_ios,
+                            size: 16,
+                          ),
                           onTap: () {
                             Navigator.of(context).pop();
                             _showTutorial();
@@ -1849,9 +2375,9 @@ class _SettingsDialogState extends State<SettingsDialog> {
                         ),
                       ],
                     ),
-                    
+
                     const SizedBox(height: 24),
-                    
+
                     // About Section
                     _buildSettingsSection(
                       title: l10n.about,
@@ -1863,9 +2389,8 @@ class _SettingsDialogState extends State<SettingsDialog> {
                             children: [
                               Text(
                                 'Routine 24',
-                                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                ),
+                                style: Theme.of(context).textTheme.titleMedium
+                                    ?.copyWith(fontWeight: FontWeight.bold),
                               ),
                               const SizedBox(height: 8),
                               Text(
@@ -1891,7 +2416,10 @@ class _SettingsDialogState extends State<SettingsDialog> {
     );
   }
 
-  Widget _buildSettingsSection({required String title, required List<Widget> children}) {
+  Widget _buildSettingsSection({
+    required String title,
+    required List<Widget> children,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1910,12 +2438,12 @@ class _SettingsDialogState extends State<SettingsDialog> {
             color: Theme.of(context).colorScheme.surface,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
+              color: Theme.of(
+                context,
+              ).colorScheme.outline.withValues(alpha: 0.2),
             ),
           ),
-          child: Column(
-            children: children,
-          ),
+          child: Column(children: children),
         ),
       ],
     );
@@ -1933,14 +2461,20 @@ class _SettingsDialogState extends State<SettingsDialog> {
             itemCount: widget.languageService.supportedLocales.length,
             itemBuilder: (context, index) {
               final locale = widget.languageService.supportedLocales[index];
-              final languageName = widget.languageService.getLanguageName(locale.languageCode);
-              final nativeName = widget.languageService.getNativeName(locale.languageCode);
+              final languageName = widget.languageService.getLanguageName(
+                locale.languageCode,
+              );
+              final nativeName = widget.languageService.getNativeName(
+                locale.languageCode,
+              );
               final isSelected = locale == widget.languageService.locale;
-              
+
               return ListTile(
                 title: Text(languageName),
                 subtitle: Text(nativeName),
-                trailing: isSelected ? const Icon(Icons.check, color: Colors.green) : null,
+                trailing: isSelected
+                    ? const Icon(Icons.check, color: Colors.green)
+                    : null,
                 onTap: () async {
                   final navigator = Navigator.of(context);
                   final messenger = ScaffoldMessenger.of(context);
@@ -1976,6 +2510,4 @@ class _SettingsDialogState extends State<SettingsDialog> {
       },
     );
   }
-
 }
-
