@@ -18,9 +18,37 @@ import 'models/user_model.dart';
 import 'models/routine_slot_model.dart';
 import 'firebase_options.dart';
 import 'l10n/app_localizations.dart';
+import 'package:timezone/data/latest.dart' as tz;
+import 'package:timezone/timezone.dart' as tz;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize timezone data for notifications
+  tz.initializeTimeZones();
+  
+  // Try to get user's timezone, fallback to device timezone
+  try {
+    final String timeZoneName = DateTime.now().timeZoneName;
+    final locations = tz.timeZoneDatabase.locations;
+    
+    // Try to find a matching timezone
+    tz.Location? userLocation;
+    for (final location in locations.values) {
+      if (location.name.contains(timeZoneName) || 
+          location.zones.any((zone) => zone.abbreviation == timeZoneName)) {
+        userLocation = location;
+        break;
+      }
+    }
+    
+    // Set timezone (fallback to UTC if not found)
+    tz.setLocalLocation(userLocation ?? tz.UTC);
+  } catch (e) {
+    // Fallback to UTC if anything goes wrong
+    tz.setLocalLocation(tz.UTC);
+  }
+  
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   
   // Initialize monetization services
@@ -616,14 +644,9 @@ class _TutorialDialogState extends State<TutorialDialog>
                   ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
                 ),
                 IconButton(
-                  icon: AnimatedIcon(
-                    icon: AnimatedIcons.close_menu,
-                    progress: _closeAnimationController,
-                  ),
+                  icon: const Icon(Icons.close),
                   onPressed: () {
-                    _closeAnimationController.forward().then((_) {
-                      Navigator.of(context).pop();
-                    });
+                    Navigator.of(context).pop();
                   },
                 ),
               ],
@@ -1142,14 +1165,19 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog>
           ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.1)
           : null,
       child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: slot.isActive
-              ? Theme.of(context).colorScheme.primary
-              : Colors.grey,
-          radius: 12,
-          child: slot.isActive
-              ? const Icon(Icons.check, size: 16, color: Colors.white)
-              : null,
+        leading: GestureDetector(
+          onTap: () => _showColorSettingsDialog(slot),
+          child: CircleAvatar(
+            backgroundColor: slot.color != null 
+                ? Color(slot.color!)
+                : (slot.isActive
+                    ? Theme.of(context).colorScheme.primary
+                    : Colors.grey),
+            radius: 12,
+            child: slot.isActive
+                ? const Icon(Icons.check, size: 16, color: Colors.white)
+                : null,
+          ),
         ),
         title: Text(
           slot.name == 'Default Routine'
@@ -1159,18 +1187,31 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog>
             fontWeight: slot.isActive ? FontWeight.bold : FontWeight.normal,
           ),
         ),
-        subtitle: Text(
-          slot.isActive
-              ? AppLocalizations.of(context)!.currentlyActive
-              : AppLocalizations.of(context)!.tapToActivate,
-          style: TextStyle(
-            color: slot.isActive
-                ? Theme.of(context).colorScheme.primary
-                : Theme.of(
-                    context,
-                  ).colorScheme.onSurface.withValues(alpha: 0.6),
-            fontSize: 12,
-          ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              slot.isActive
+                  ? AppLocalizations.of(context)!.currentlyActive
+                  : AppLocalizations.of(context)!.tapToActivate,
+              style: TextStyle(
+                color: slot.isActive
+                    ? Theme.of(context).colorScheme.primary
+                    : Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withValues(alpha: 0.6),
+                fontSize: 12,
+              ),
+            ),
+            if (widget.isProUser && slot.selectedDays.length < 7)
+              Text(
+                _getDaysText(slot.selectedDays),
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
+                  fontSize: 10,
+                ),
+              ),
+          ],
         ),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
@@ -1183,11 +1224,14 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog>
                   case 'rename':
                     _renameSlot(slot);
                     break;
-                  case 'duplicate':
-                    _duplicateSlot(slot);
-                    break;
                   case 'delete':
                     _deleteSlot(slot);
+                    break;
+                  case 'daySettings':
+                    _showDaySettingsDialog(slot);
+                    break;
+                  case 'colorSettings':
+                    _showColorSettingsDialog(slot);
                     break;
                 }
               },
@@ -1200,12 +1244,20 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog>
                     contentPadding: EdgeInsets.zero,
                   ),
                 ),
+                const PopupMenuItem(
+                  value: 'colorSettings',
+                  child: ListTile(
+                    leading: Icon(Icons.palette, size: 16),
+                    title: Text('Color Settings'),
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                ),
                 if (widget.isProUser)
                   const PopupMenuItem(
-                    value: 'duplicate',
+                    value: 'daySettings',
                     child: ListTile(
-                      leading: Icon(Icons.copy, size: 16),
-                      title: Text('Duplicate'),
+                      leading: Icon(Icons.date_range, size: 16),
+                      title: Text('Day Settings'),
                       contentPadding: EdgeInsets.zero,
                     ),
                   ),
@@ -1306,23 +1358,6 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog>
     );
   }
 
-  void _duplicateSlot(RoutineSlot slot) {
-    if (!widget.isProUser) {
-      _showUpgradeDialog();
-      return;
-    }
-
-    final newSlot = RoutineSlot(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      name: '${slot.name} (Copy)',
-      isActive: false,
-      isPaid: true,
-    );
-
-    setState(() {
-      routineSlots.add(newSlot);
-    });
-  }
 
   void _deleteSlot(RoutineSlot slot) {
     if (routineSlots.length <= 1) return;
@@ -1362,6 +1397,210 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog>
     );
   }
 
+  String _getDaysText(List<int> selectedDays) {
+    if (selectedDays.length == 7) return 'Every day';
+    if (selectedDays.isEmpty) return 'No days selected';
+
+    final dayAbbreviations = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    final selectedAbbreviations = selectedDays
+        .map((dayIndex) => dayAbbreviations[dayIndex - 1])
+        .toList();
+    
+    return selectedAbbreviations.join(', ');
+  }
+
+  void _showDaySettingsDialog(RoutineSlot slot) {
+    List<int> selectedDays = List.from(slot.selectedDays);
+    final dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) {
+          return AlertDialog(
+            title: Text('Day Settings for ${slot.name}'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Select which days this routine should be active:'),
+                const SizedBox(height: 16),
+                ...dayNames.asMap().entries.map((entry) {
+                  final dayIndex = entry.key + 1; // 1-7 for Monday-Sunday
+                  final dayName = entry.value;
+                  final isSelected = selectedDays.contains(dayIndex);
+
+                  return CheckboxListTile(
+                    title: Text(dayName),
+                    value: isSelected,
+                    onChanged: (bool? value) {
+                      setState(() {
+                        if (value == true) {
+                          if (!selectedDays.contains(dayIndex)) {
+                            selectedDays.add(dayIndex);
+                            selectedDays.sort();
+                          }
+                        } else {
+                          selectedDays.remove(dayIndex);
+                        }
+                      });
+                    },
+                    contentPadding: EdgeInsets.zero,
+                    dense: true,
+                  );
+                }),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text(AppLocalizations.of(context)!.cancel),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  setState(() {
+                    final index = routineSlots.indexWhere((s) => s.id == slot.id);
+                    if (index != -1) {
+                      routineSlots[index] = slot.copyWith(selectedDays: selectedDays);
+                    }
+                  });
+                  widget.onSlotsChanged(routineSlots, activeSlot);
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Day settings updated for ${slot.name}'),
+                      duration: const Duration(seconds: 2),
+                    ),
+                  );
+                },
+                child: const Text('Save'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  void _showColorSettingsDialog(RoutineSlot slot) {
+    final colors = [
+      0xFF2196F3, // Blue
+      0xFF4CAF50, // Green
+      0xFFF44336, // Red
+      0xFF9C27B0, // Purple
+      0xFFFF9800, // Orange
+      0xFF009688, // Teal
+      0xFFE91E63, // Pink
+      0xFF3F51B5, // Indigo
+      0xFFFFC107, // Amber
+      0xFFFF5722, // Deep Orange
+      0xFF03A9F4, // Light Blue
+      0xFFCDDC39, // Lime
+    ];
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Choose Color for ${slot.name}'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: GridView.builder(
+            shrinkWrap: true,
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 4,
+              crossAxisSpacing: 8,
+              mainAxisSpacing: 8,
+            ),
+            itemCount: colors.length + 1, // +1 for default option
+            itemBuilder: (context, index) {
+              if (index == 0) {
+                // Default color option
+                return GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      final slotIndex = routineSlots.indexWhere((s) => s.id == slot.id);
+                      if (slotIndex != -1) {
+                        routineSlots[slotIndex] = slot.copyWith(color: null);
+                      }
+                    });
+                    widget.onSlotsChanged(routineSlots, activeSlot);
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Color reset to default for ${slot.name}'),
+                        duration: const Duration(seconds: 2),
+                      ),
+                    );
+                  },
+                  child: Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.grey, width: 2),
+                      color: Colors.transparent,
+                    ),
+                    child: const Center(
+                      child: Text(
+                        'Default',
+                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
+                );
+              }
+
+              final colorValue = colors[index - 1];
+              final color = Color(colorValue);
+              final isSelected = slot.color == colorValue;
+
+              return GestureDetector(
+                onTap: () {
+                  setState(() {
+                    final slotIndex = routineSlots.indexWhere((s) => s.id == slot.id);
+                    if (slotIndex != -1) {
+                      routineSlots[slotIndex] = slot.copyWith(color: colorValue);
+                    }
+                  });
+                  widget.onSlotsChanged(routineSlots, activeSlot);
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Color updated for ${slot.name}'),
+                      duration: const Duration(seconds: 2),
+                    ),
+                  );
+                },
+                child: Container(
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: color,
+                    border: isSelected 
+                        ? Border.all(color: Colors.white, width: 3)
+                        : null,
+                    boxShadow: isSelected
+                        ? [BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 2))]
+                        : null,
+                  ),
+                  child: isSelected
+                      ? const Center(
+                          child: Icon(Icons.check, color: Colors.white, size: 20),
+                        )
+                      : null,
+                ),
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(AppLocalizations.of(context)!.cancel),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showUpgradeDialog() {
     showDialog(
       context: context,
@@ -1374,7 +1613,9 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog>
             Text('Pro features include:'),
             SizedBox(height: 8),
             Text('• Unlimited routine slots'),
-            Text('• Duplicate routines'),
+            Text('• Schedule routines for specific days (Mon-Sun)'),
+            Text('• Duplicate and copy routines'),
+            Text('• Advanced notifications with vibration'),
             Text('• Priority support'),
             Text('• Advanced customization'),
           ],
@@ -1973,8 +2214,9 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog>
                 
                 // Pro Features List
                 _buildProFeature(context, Icons.block, 'Remove all advertisements'),
-                _buildProFeature(context, Icons.all_inclusive, 'Unlimited time slots'),
-                _buildProFeature(context, Icons.notifications_active, 'Advanced notifications'),
+                _buildProFeature(context, Icons.all_inclusive, 'Unlimited routine slots'),
+                _buildProFeature(context, Icons.calendar_today, 'Schedule routines for specific days'),
+                _buildProFeature(context, Icons.notifications_active, 'Advanced notifications with vibration'),
                 _buildProFeature(context, Icons.backup, 'Cloud sync backup'),
                 _buildProFeature(context, Icons.support, 'Priority support'),
                 

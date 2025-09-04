@@ -4,6 +4,8 @@ class RoutineSlot {
   final bool isActive;
   final bool isPaid;
   final List<RoutineTimeSlot> timeSlots;
+  final List<int> selectedDays; // 1=Monday, 2=Tuesday, ..., 7=Sunday
+  final int? color; // Color value for the circle indicator
   final DateTime? createdAt;
   final DateTime? lastModified;
 
@@ -13,6 +15,8 @@ class RoutineSlot {
     required this.isActive,
     required this.isPaid,
     this.timeSlots = const [],
+    this.selectedDays = const [1, 2, 3, 4, 5, 6, 7], // Default: all days
+    this.color,
     this.createdAt,
     this.lastModified,
   });
@@ -23,6 +27,8 @@ class RoutineSlot {
     bool? isActive,
     bool? isPaid,
     List<RoutineTimeSlot>? timeSlots,
+    List<int>? selectedDays,
+    int? color,
     DateTime? createdAt,
     DateTime? lastModified,
   }) {
@@ -32,6 +38,8 @@ class RoutineSlot {
       isActive: isActive ?? this.isActive,
       isPaid: isPaid ?? this.isPaid,
       timeSlots: timeSlots ?? this.timeSlots,
+      selectedDays: selectedDays ?? this.selectedDays,
+      color: color ?? this.color,
       createdAt: createdAt ?? this.createdAt,
       lastModified: lastModified ?? this.lastModified,
     );
@@ -44,6 +52,8 @@ class RoutineSlot {
       'isActive': isActive,
       'isPaid': isPaid,
       'timeSlots': timeSlots.map((slot) => slot.toJson()).toList(),
+      'selectedDays': selectedDays,
+      'color': color,
       'createdAt': createdAt?.millisecondsSinceEpoch,
       'lastModified': lastModified?.millisecondsSinceEpoch,
     };
@@ -59,6 +69,9 @@ class RoutineSlot {
               ?.map((item) => RoutineTimeSlot.fromJson(item as Map<String, dynamic>))
               .toList() ??
           [],
+      selectedDays: (json['selectedDays'] as List<dynamic>?)?.cast<int>() ?? 
+          [1, 2, 3, 4, 5, 6, 7], // Default: all days
+      color: json['color'],
       createdAt: json['createdAt'] != null
           ? DateTime.fromMillisecondsSinceEpoch(json['createdAt'])
           : null,
@@ -78,6 +91,12 @@ class RoutineTimeSlot {
   final String? label;
   final String? description;
   final int? color;
+  final bool hasAlarm;
+  final bool hasPreAlarm;
+  final int preAlarmMinutes; // Minutes before main alarm
+  final bool snoozeEnabled;
+  final int snoozeDuration; // Minutes for snooze
+  final int maxSnoozeCount; // Maximum snooze attempts
   final DateTime? createdAt;
 
   RoutineTimeSlot({
@@ -89,6 +108,12 @@ class RoutineTimeSlot {
     this.label,
     this.description,
     this.color,
+    this.hasAlarm = false,
+    this.hasPreAlarm = false,
+    this.preAlarmMinutes = 15,
+    this.snoozeEnabled = true,
+    this.snoozeDuration = 10,
+    this.maxSnoozeCount = 3,
     this.createdAt,
   });
 
@@ -101,6 +126,12 @@ class RoutineTimeSlot {
     String? label,
     String? description,
     int? color,
+    bool? hasAlarm,
+    bool? hasPreAlarm,
+    int? preAlarmMinutes,
+    bool? snoozeEnabled,
+    int? snoozeDuration,
+    int? maxSnoozeCount,
     DateTime? createdAt,
   }) {
     return RoutineTimeSlot(
@@ -112,6 +143,12 @@ class RoutineTimeSlot {
       label: label ?? this.label,
       description: description ?? this.description,
       color: color ?? this.color,
+      hasAlarm: hasAlarm ?? this.hasAlarm,
+      hasPreAlarm: hasPreAlarm ?? this.hasPreAlarm,
+      preAlarmMinutes: preAlarmMinutes ?? this.preAlarmMinutes,
+      snoozeEnabled: snoozeEnabled ?? this.snoozeEnabled,
+      snoozeDuration: snoozeDuration ?? this.snoozeDuration,
+      maxSnoozeCount: maxSnoozeCount ?? this.maxSnoozeCount,
       createdAt: createdAt ?? this.createdAt,
     );
   }
@@ -126,6 +163,12 @@ class RoutineTimeSlot {
       'label': label,
       'description': description,
       'color': color,
+      'hasAlarm': hasAlarm,
+      'hasPreAlarm': hasPreAlarm,
+      'preAlarmMinutes': preAlarmMinutes,
+      'snoozeEnabled': snoozeEnabled,
+      'snoozeDuration': snoozeDuration,
+      'maxSnoozeCount': maxSnoozeCount,
       'createdAt': createdAt?.millisecondsSinceEpoch,
     };
   }
@@ -140,6 +183,12 @@ class RoutineTimeSlot {
       label: json['label'],
       description: json['description'],
       color: json['color'],
+      hasAlarm: json['hasAlarm'] ?? false,
+      hasPreAlarm: json['hasPreAlarm'] ?? false,
+      preAlarmMinutes: json['preAlarmMinutes'] ?? 15,
+      snoozeEnabled: json['snoozeEnabled'] ?? true,
+      snoozeDuration: json['snoozeDuration'] ?? 10,
+      maxSnoozeCount: json['maxSnoozeCount'] ?? 3,
       createdAt: json['createdAt'] != null
           ? DateTime.fromMillisecondsSinceEpoch(json['createdAt'])
           : null,

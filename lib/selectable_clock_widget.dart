@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
+import 'dart:typed_data';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:rive/rive.dart' as rive;
 import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'package:vibration/vibration.dart';
 import 'models/routine_slot_model.dart';
 import 'l10n/app_localizations.dart';
 import 'services/ad_service.dart';
@@ -18,6 +20,12 @@ class TimeSlot {
   final String description;
   final Color color;
   final bool notificationEnabled;
+  final bool hasAlarm;
+  final bool hasPreAlarm;
+  final int preAlarmMinutes;
+  final bool snoozeEnabled;
+  final int snoozeDuration;
+  final int maxSnoozeCount;
 
   TimeSlot({
     required this.id,
@@ -29,6 +37,12 @@ class TimeSlot {
     this.description = '',
     required this.color,
     this.notificationEnabled = true,
+    this.hasAlarm = false,
+    this.hasPreAlarm = false,
+    this.preAlarmMinutes = 15,
+    this.snoozeEnabled = true,
+    this.snoozeDuration = 10,
+    this.maxSnoozeCount = 3,
   });
 }
 
@@ -90,6 +104,7 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget> with Tick
 
     // Convert widget timeSlots to internal TimeSlot format
     timeSlots = widget.timeSlots.map(_routineTimeSlotToTimeSlot).toList();
+    
 
     // Initialize main animations first
     _highlightController = AnimationController(
@@ -154,51 +169,111 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget> with Tick
   Future<void> _initializeNotifications() async {
     const AndroidInitializationSettings initializationSettingsAndroid =
         AndroidInitializationSettings('@mipmap/ic_launcher');
+    
+    const DarwinInitializationSettings initializationSettingsIOS =
+        DarwinInitializationSettings(
+      requestAlertPermission: true,
+      requestBadgePermission: true,
+      requestSoundPermission: true,
+    );
+    
     const InitializationSettings initializationSettings =
-        InitializationSettings(android: initializationSettingsAndroid);
+        InitializationSettings(
+          android: initializationSettingsAndroid,
+          iOS: initializationSettingsIOS,
+        );
+    
     await flutterLocalNotificationsPlugin.initialize(initializationSettings);
+    
+    // Request permissions explicitly for iOS
+    await flutterLocalNotificationsPlugin
+        .resolvePlatformSpecificImplementation<
+            IOSFlutterLocalNotificationsPlugin>()
+        ?.requestPermissions(
+          alert: true,
+          badge: true,
+          sound: true,
+        );
   }
 
-  Future<void> _scheduleNotification(TimeSlot slot) async {
+  // Test vibration method
+  Future<void> _testVibration() async {
+    bool? hasVibrator = await Vibration.hasVibrator();
+    if (hasVibrator == true) {
+      // Custom vibration pattern: [wait, vibrate, wait, vibrate]
+      Vibration.vibrate(pattern: [0, 1000, 500, 1000]);
+    }
+  }
+
+  Future<void> _scheduleNotification(TimeSlot slot, {List<int>? selectedDays}) async {
     if (!globalNotificationsEnabled || !slot.notificationEnabled) return;
 
-    // Schedule daily notification for this time slot
-    final now = DateTime.now();
-    final scheduledTime = DateTime(
-      now.year,
-      now.month,
-      now.day,
-      slot.startHour,
-      slot.startMinute,
-    );
+    // Default to all days if not specified
+    final days = selectedDays ?? [1, 2, 3, 4, 5, 6, 7];
+    
+    // Schedule notification for each selected day of the week
+    for (int dayOfWeek in days) {
+      final now = DateTime.now();
+      final currentDayOfWeek = now.weekday; // 1 = Monday, 7 = Sunday
+      
+      // Calculate days until the target day
+      int daysUntilTarget = (dayOfWeek - currentDayOfWeek) % 7;
+      if (daysUntilTarget == 0) {
+        // It's today - check if time has passed
+        final todayScheduledTime = DateTime(
+          now.year,
+          now.month,
+          now.day,
+          slot.startHour,
+          slot.startMinute,
+        );
+        
+        if (todayScheduledTime.isBefore(now)) {
+          daysUntilTarget = 7; // Schedule for next week
+        }
+      }
+      
+      final notificationTime = DateTime(
+        now.year,
+        now.month,
+        now.day + daysUntilTarget,
+        slot.startHour,
+        slot.startMinute,
+      );
 
-    // If the time has passed today, schedule for tomorrow
-    final notificationTime = scheduledTime.isBefore(now)
-        ? scheduledTime.add(const Duration(days: 1))
-        : scheduledTime;
+      final androidDetails = AndroidNotificationDetails(
+        'routine_notifications',
+        'Routine Notifications',
+        channelDescription: 'Notifications for your scheduled time slots',
+        importance: Importance.max,
+        priority: Priority.high,
+        enableVibration: true,
+        vibrationPattern: Int64List.fromList([0, 1000, 500, 1000]), // Vibration pattern
+        playSound: true,
+      );
 
-    const androidDetails = AndroidNotificationDetails(
-      'routine_notifications',
-      'Routine Notifications',
-      channelDescription: 'Notifications for your scheduled time slots',
-      importance: Importance.max,
-      priority: Priority.high,
-    );
+      const iosDetails = DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+      );
 
-    const platformChannelSpecifics = NotificationDetails(
-      android: androidDetails,
-    );
+      final platformChannelSpecifics = NotificationDetails(
+        android: androidDetails,
+        iOS: iosDetails,
+      );
 
-    await flutterLocalNotificationsPlugin.zonedSchedule(
-      slot.id.hashCode,
-      'Time for: ${slot.title}',
-      '${_formatTimeWithMinutes(slot.startHour, slot.startMinute)} - ${_formatTimeWithMinutes(slot.endHour, slot.endMinute)}',
-      tz.TZDateTime.from(notificationTime, tz.local),
-      platformChannelSpecifics,
-      matchDateTimeComponents: DateTimeComponents.time, // Repeat daily
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
-    );
+      await flutterLocalNotificationsPlugin.zonedSchedule(
+        slot.id.hashCode + dayOfWeek, // Unique ID for each day
+        'Time for: ${slot.title}',
+        '${_formatTimeWithMinutes(slot.startHour, slot.startMinute)} - ${_formatTimeWithMinutes(slot.endHour, slot.endMinute)}',
+        tz.TZDateTime.from(notificationTime, tz.local),
+        platformChannelSpecifics,
+        matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime, // Repeat weekly
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
+      );
+    }
   }
 
   Future<void> _cancelNotification(String slotId) async {
@@ -474,6 +549,14 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget> with Tick
     Color selectedColor = existingSlot?.color ?? availableColors[0];
     bool notificationEnabled =
         existingSlot?.notificationEnabled ?? globalNotificationsEnabled;
+    
+    // Pro alarm settings
+    bool hasAlarm = existingSlot?.hasAlarm ?? widget.isProUser;
+    bool hasPreAlarm = existingSlot?.hasPreAlarm ?? false;
+    int preAlarmMinutes = existingSlot?.preAlarmMinutes ?? 15;
+    bool snoozeEnabled = existingSlot?.snoozeEnabled ?? true;
+    int snoozeDuration = existingSlot?.snoozeDuration ?? 10;
+    int maxSnoozeCount = existingSlot?.maxSnoozeCount ?? 3;
 
     // Initialize time values with proper null handling
     int selectedStartHour = existingSlot?.startHour ?? (startHour ?? 0);
@@ -984,6 +1067,263 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget> with Tick
                         ),
                       ],
                     ),
+                    
+                    // Pro Alarm Settings Section
+                    if (notificationEnabled) ...[
+                      const SizedBox(height: 20),
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.amber.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: Colors.amber.withValues(alpha: 0.3),
+                            width: 1,
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.star,
+                                  color: Colors.amber,
+                                  size: 20,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    'PRO Alarm Settings',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.amber[700],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            
+                            if (widget.isProUser) ...[
+                              // Pre-Alarm Settings
+                                Row(
+                                  children: [
+                                    Icon(
+                                      Icons.alarm_add,
+                                      color: Theme.of(context).colorScheme.onSurface,
+                                      size: 18,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        'Pre-Alarm',
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          color: Theme.of(context).colorScheme.onSurface,
+                                        ),
+                                      ),
+                                    ),
+                                    Switch(
+                                      value: hasPreAlarm,
+                                      onChanged: (value) {
+                                        setModalState(() {
+                                          hasPreAlarm = value;
+                                        });
+                                      },
+                                    ),
+                                  ],
+                                ),
+                                
+                                if (hasPreAlarm) ...[
+                                  const SizedBox(height: 8),
+                                  Padding(
+                                    padding: const EdgeInsets.only(left: 26),
+                                    child: Row(
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            'Pre-alarm time:',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                                            ),
+                                          ),
+                                        ),
+                                        DropdownButton<int>(
+                                          value: preAlarmMinutes,
+                                          underline: Container(),
+                                          items: [5, 10, 15, 20, 30].map((minutes) {
+                                            return DropdownMenuItem(
+                                              value: minutes,
+                                              child: Text(
+                                                '$minutes min',
+                                                style: const TextStyle(fontSize: 12),
+                                              ),
+                                            );
+                                          }).toList(),
+                                          onChanged: (value) {
+                                            setModalState(() {
+                                              preAlarmMinutes = value!;
+                                            });
+                                          },
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                                
+                                const SizedBox(height: 12),
+                                
+                                // Snooze Settings
+                                Row(
+                                  children: [
+                                    Icon(
+                                      Icons.snooze,
+                                      color: Theme.of(context).colorScheme.onSurface,
+                                      size: 18,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        'Allow Snooze',
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          color: Theme.of(context).colorScheme.onSurface,
+                                        ),
+                                      ),
+                                    ),
+                                    Switch(
+                                      value: snoozeEnabled,
+                                      onChanged: (value) {
+                                        setModalState(() {
+                                          snoozeEnabled = value;
+                                        });
+                                      },
+                                    ),
+                                  ],
+                                ),
+                                
+                                if (snoozeEnabled) ...[
+                                  const SizedBox(height: 8),
+                                  Padding(
+                                    padding: const EdgeInsets.only(left: 26),
+                                    child: Column(
+                                      children: [
+                                        Row(
+                                          children: [
+                                            Expanded(
+                                              child: Text(
+                                                'Duration:',
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                                                ),
+                                              ),
+                                            ),
+                                            DropdownButton<int>(
+                                              value: snoozeDuration,
+                                              underline: Container(),
+                                              items: [5, 10, 15, 20].map((minutes) {
+                                                return DropdownMenuItem(
+                                                  value: minutes,
+                                                  child: Text(
+                                                    '$minutes min',
+                                                    style: const TextStyle(fontSize: 12),
+                                                  ),
+                                                );
+                                              }).toList(),
+                                              onChanged: (value) {
+                                                setModalState(() {
+                                                  snoozeDuration = value!;
+                                                });
+                                              },
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Row(
+                                          children: [
+                                            Expanded(
+                                              child: Text(
+                                                'Max attempts:',
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                                                ),
+                                              ),
+                                            ),
+                                            DropdownButton<int>(
+                                              value: maxSnoozeCount,
+                                              underline: Container(),
+                                              items: [1, 2, 3, 4, 5].map((count) {
+                                                return DropdownMenuItem(
+                                                  value: count,
+                                                  child: Text(
+                                                    '$count times',
+                                                    style: const TextStyle(fontSize: 12),
+                                                  ),
+                                                );
+                                              }).toList(),
+                                              onChanged: (value) {
+                                                setModalState(() {
+                                                  maxSnoozeCount = value!;
+                                                });
+                                              },
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                            ] else ...[
+                              // Free User Upgrade Prompt
+                              Column(
+                                children: [
+                                  Text(
+                                    'Get advanced alarm features with pre-alarm warnings and snooze functionality.',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  const SizedBox(height: 12),
+                                  SizedBox(
+                                    width: double.infinity,
+                                    child: ElevatedButton(
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.amber,
+                                        foregroundColor: Colors.black,
+                                        padding: const EdgeInsets.symmetric(vertical: 12),
+                                      ),
+                                      onPressed: () {
+                                        Navigator.of(context).pop();
+                                        // Add your upgrade to pro logic here
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(
+                                            content: Text('Upgrade to Pro to access alarm settings!'),
+                                            duration: Duration(seconds: 2),
+                                          ),
+                                        );
+                                      },
+                                      child: const Text(
+                                        'Upgrade to PRO',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -1033,6 +1373,12 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget> with Tick
                       description: descriptionController.text.trim(),
                       color: selectedColor,
                       notificationEnabled: notificationEnabled,
+                      hasAlarm: hasAlarm,
+                      hasPreAlarm: hasPreAlarm,
+                      preAlarmMinutes: preAlarmMinutes,
+                      snoozeEnabled: snoozeEnabled,
+                      snoozeDuration: snoozeDuration,
+                      maxSnoozeCount: maxSnoozeCount,
                     );
 
                     if (existingSlot != null) {
