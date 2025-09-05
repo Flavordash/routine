@@ -1303,15 +1303,15 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget> with Tick
                                         Navigator.of(context).pop();
                                         // Add your upgrade to pro logic here
                                         ScaffoldMessenger.of(context).showSnackBar(
-                                          const SnackBar(
+                                          SnackBar(
                                             content: Text('Upgrade to Pro to access alarm settings!'),
-                                            duration: Duration(seconds: 2),
+                                            duration: const Duration(seconds: 2),
                                           ),
                                         );
                                       },
-                                      child: const Text(
+                                      child: Text(
                                         'Upgrade to PRO',
-                                        style: TextStyle(
+                                        style: const TextStyle(
                                           fontWeight: FontWeight.bold,
                                         ),
                                       ),

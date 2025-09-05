@@ -1083,7 +1083,7 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog>
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'Free users can use 1 slot. Upgrade to Pro for unlimited slots.',
+                        AppLocalizations.of(context)!.freeUsersOneSlot,
                         style: TextStyle(
                           color: Colors.orange.shade700,
                           fontSize: 12,
@@ -1149,7 +1149,7 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog>
                     // Show upgrade dialog
                     _showUpgradeDialog();
                   },
-                  child: const Text('Upgrade to Pro for unlimited slots'),
+                  child: Text(AppLocalizations.of(context)!.upgradeToProUnlimited),
                 ),
               ),
           ],
@@ -1162,7 +1162,9 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog>
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       color: slot.isActive
-          ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.1)
+          ? (Theme.of(context).brightness == Brightness.light
+              ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.05)
+              : Theme.of(context).colorScheme.primary.withValues(alpha: 0.1))
           : null,
       child: ListTile(
         leading: GestureDetector(
@@ -1224,6 +1226,9 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog>
                   case 'rename':
                     _renameSlot(slot);
                     break;
+                  case 'duplicate':
+                    _duplicateSlot(slot);
+                    break;
                   case 'delete':
                     _deleteSlot(slot);
                     break;
@@ -1252,7 +1257,15 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog>
                     contentPadding: EdgeInsets.zero,
                   ),
                 ),
-                if (widget.isProUser)
+                if (widget.isProUser) ...[
+                  const PopupMenuItem(
+                    value: 'duplicate',
+                    child: ListTile(
+                      leading: Icon(Icons.copy, size: 16),
+                      title: Text('Duplicate'),
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ),
                   const PopupMenuItem(
                     value: 'daySettings',
                     child: ListTile(
@@ -1261,6 +1274,7 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog>
                       contentPadding: EdgeInsets.zero,
                     ),
                   ),
+                ],
                 if (routineSlots.length > 1)
                   const PopupMenuItem(
                     value: 'delete',
@@ -1358,6 +1372,32 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog>
     );
   }
 
+  void _duplicateSlot(RoutineSlot slot) {
+    if (!widget.isProUser) {
+      _showUpgradeDialog();
+      return;
+    }
+
+    final duplicatedSlot = RoutineSlot(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      name: '${slot.name} (Copy)',
+      isActive: false,
+      isPaid: slot.isPaid,
+      color: slot.color,
+      selectedDays: List.from(slot.selectedDays),
+    );
+
+    setState(() {
+      routineSlots.add(duplicatedSlot);
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('${AppLocalizations.of(context)!.duplicate} "${slot.name}" successfully'),
+        backgroundColor: Colors.green,
+      ),
+    );
+  }
 
   void _deleteSlot(RoutineSlot slot) {
     if (routineSlots.length <= 1) return;
@@ -1606,18 +1646,18 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog>
       context: context,
       builder: (context) => AlertDialog(
         title: Text(AppLocalizations.of(context)!.upgradeToProButton),
-        content: const Column(
+        content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Pro features include:'),
-            SizedBox(height: 8),
-            Text('• Unlimited routine slots'),
+            Text(AppLocalizations.of(context)!.proFeatures),
+            const SizedBox(height: 8),
+            Text(AppLocalizations.of(context)!.unlimitedSlots),
             Text('• Schedule routines for specific days (Mon-Sun)'),
-            Text('• Duplicate and copy routines'),
+            Text(AppLocalizations.of(context)!.duplicateRoutines),
             Text('• Advanced notifications with vibration'),
-            Text('• Priority support'),
-            Text('• Advanced customization'),
+            Text(AppLocalizations.of(context)!.prioritySupport),
+            Text(AppLocalizations.of(context)!.advancedCustomization),
           ],
         ),
         actions: [
@@ -2190,7 +2230,7 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog>
               ),
               const SizedBox(width: 8),
               Text(
-                'Upgrade to Pro',
+                AppLocalizations.of(context)!.upgradeToProButton,
                 style: TextStyle(
                   color: Theme.of(context).colorScheme.onSurface,
                   fontWeight: FontWeight.bold,
@@ -2214,11 +2254,11 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog>
                 
                 // Pro Features List
                 _buildProFeature(context, Icons.block, 'Remove all advertisements'),
-                _buildProFeature(context, Icons.all_inclusive, 'Unlimited routine slots'),
+                _buildProFeature(context, Icons.all_inclusive, AppLocalizations.of(context)!.unlimitedSlots.substring(2)), // Remove the bullet point
                 _buildProFeature(context, Icons.calendar_today, 'Schedule routines for specific days'),
                 _buildProFeature(context, Icons.notifications_active, 'Advanced notifications with vibration'),
                 _buildProFeature(context, Icons.backup, 'Cloud sync backup'),
-                _buildProFeature(context, Icons.support, 'Priority support'),
+                _buildProFeature(context, Icons.support, AppLocalizations.of(context)!.prioritySupport.substring(2)), // Remove the bullet point
                 
                 const SizedBox(height: 20),
                 
@@ -2273,7 +2313,7 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog>
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
               child: Text(
-                'Maybe Later',
+                AppLocalizations.of(context)!.later,
                 style: TextStyle(
                   color: Theme.of(context).colorScheme.onSurface,
                 ),
