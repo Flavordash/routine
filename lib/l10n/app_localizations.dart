@@ -659,6 +659,114 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Default Routine'**
   String get defaultRoutine;
+
+  /// Pro feature: schedule for specific days (full text)
+  ///
+  /// In en, this message translates to:
+  /// **'Schedule routine for specific days (Mon-Sun)'**
+  String get scheduleSpecificDaysFull;
+
+  /// Pro feature: advanced notifications (full text)
+  ///
+  /// In en, this message translates to:
+  /// **'Advanced notification with vibration'**
+  String get advancedNotificationsFull;
+
+  /// Pro upgrade call to action
+  ///
+  /// In en, this message translates to:
+  /// **'Get Unlimited Access'**
+  String get getUnlimitedAccess;
+
+  /// Pro feature: remove all ads
+  ///
+  /// In en, this message translates to:
+  /// **'Remove all advertisements'**
+  String get removeAllAds;
+
+  /// Pro feature: schedule specific days
+  ///
+  /// In en, this message translates to:
+  /// **'Schedule Specific Days'**
+  String get scheduleSpecificDays;
+
+  /// Pro feature: advanced notifications
+  ///
+  /// In en, this message translates to:
+  /// **'Advanced Notifications'**
+  String get advancedNotifications;
+
+  /// Pro feature: cloud sync and backup
+  ///
+  /// In en, this message translates to:
+  /// **'Cloud Sync & Backup'**
+  String get cloudSyncBackup;
+
+  /// Subscription plan selection title
+  ///
+  /// In en, this message translates to:
+  /// **'Choose Your Plan'**
+  String get chooseYourPlan;
+
+  /// Monthly subscription plan
+  ///
+  /// In en, this message translates to:
+  /// **'Monthly Plan'**
+  String get monthlyPlan;
+
+  /// Monthly subscription price
+  ///
+  /// In en, this message translates to:
+  /// **'\$0.99/month'**
+  String get monthlyPrice;
+
+  /// Yearly subscription plan
+  ///
+  /// In en, this message translates to:
+  /// **'Yearly Plan'**
+  String get yearlyPlan;
+
+  /// Yearly subscription price
+  ///
+  /// In en, this message translates to:
+  /// **'\$6.99/year'**
+  String get yearlyPrice;
+
+  /// Savings text for yearly plan
+  ///
+  /// In en, this message translates to:
+  /// **'Save 42%'**
+  String get savingsText;
+
+  /// Restore purchases button
+  ///
+  /// In en, this message translates to:
+  /// **'Restore'**
+  String get restore;
+
+  /// Popular plan badge
+  ///
+  /// In en, this message translates to:
+  /// **'Popular'**
+  String get popular;
+
+  /// Purchase processing message
+  ///
+  /// In en, this message translates to:
+  /// **'Processing Purchase...'**
+  String get processingPurchase;
+
+  /// Purchase processing placeholder text
+  ///
+  /// In en, this message translates to:
+  /// **'Processing your purchase. Please wait...'**
+  String get purchasePlaceholder;
+
+  /// Restore processing placeholder text
+  ///
+  /// In en, this message translates to:
+  /// **'Restoring your purchases. Please wait...'**
+  String get restorePlaceholder;
 }
 
 class _AppLocalizationsDelegate

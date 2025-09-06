@@ -300,4 +300,58 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get defaultRoutine => '기본 루틴';
+
+  @override
+  String get scheduleSpecificDaysFull => '특정 요일(월-일)에 루틴 예약';
+
+  @override
+  String get advancedNotificationsFull => '진동과 함께하는 고급 알림';
+
+  @override
+  String get getUnlimitedAccess => '무제한 접근 권한 얻기';
+
+  @override
+  String get removeAllAds => '모든 광고 제거';
+
+  @override
+  String get scheduleSpecificDays => '특정 요일 예약';
+
+  @override
+  String get advancedNotifications => '고급 알림';
+
+  @override
+  String get cloudSyncBackup => '클라우드 동기화 및 백업';
+
+  @override
+  String get chooseYourPlan => '요금제를 선택하세요';
+
+  @override
+  String get monthlyPlan => '월간 요금제';
+
+  @override
+  String get monthlyPrice => '\$0.99/월';
+
+  @override
+  String get yearlyPlan => '연간 요금제';
+
+  @override
+  String get yearlyPrice => '\$6.99/년';
+
+  @override
+  String get savingsText => '42% 절약';
+
+  @override
+  String get restore => '복원';
+
+  @override
+  String get popular => '인기';
+
+  @override
+  String get processingPurchase => '구매 처리 중...';
+
+  @override
+  String get purchasePlaceholder => '구매를 처리 중입니다. 잠시 기다려 주세요...';
+
+  @override
+  String get restorePlaceholder => '구매를 복원 중입니다. 잠시 기다려 주세요...';
 }

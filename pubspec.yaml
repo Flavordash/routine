@@ -65,6 +65,8 @@ dependencies:
   # Monetization
   google_mobile_ads: ^5.1.0
   in_app_purchase: ^3.1.13
+  in_app_purchase_storekit: ^0.3.6+4
+  in_app_purchase_android: ^0.3.0+18
 
 dev_dependencies:
   flutter_test:

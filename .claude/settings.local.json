@@ -24,7 +24,8 @@
       "Bash(ANDROID_HOME=/Users/dashpill/Library/Android/sdk ANDROID_SDK_ROOT=/Users/dashpill/Library/Android/sdk flutter emulators --launch Pixel_6_API_21)",
       "Read(/Users/dashpill/Library/Android/sdk/**)",
       "Read(/Users/dashpill/.android/avd/**)",
-      "Bash(pod cache clean:*)"
+      "Bash(pod cache clean:*)",
+      "Bash(dart run intl_utils:generate:*)"
     ],
     "deny": [],
     "ask": []

@@ -395,5 +395,77 @@
   "defaultRoutine": "Default Routine",
   "@defaultRoutine": {
     "description": "Default routine name for new users"
+  },
+  "scheduleSpecificDaysFull": "Schedule routine for specific days (Mon-Sun)",
+  "@scheduleSpecificDaysFull": {
+    "description": "Pro feature: schedule for specific days (full text)"
+  },
+  "advancedNotificationsFull": "Advanced notification with vibration",
+  "@advancedNotificationsFull": {
+    "description": "Pro feature: advanced notifications (full text)"
+  },
+  "getUnlimitedAccess": "Get Unlimited Access",
+  "@getUnlimitedAccess": {
+    "description": "Pro upgrade call to action"
+  },
+  "removeAllAds": "Remove all advertisements",
+  "@removeAllAds": {
+    "description": "Pro feature: remove all ads"
+  },
+  "scheduleSpecificDays": "Schedule Specific Days",
+  "@scheduleSpecificDays": {
+    "description": "Pro feature: schedule specific days"
+  },
+  "advancedNotifications": "Advanced Notifications",
+  "@advancedNotifications": {
+    "description": "Pro feature: advanced notifications"
+  },
+  "cloudSyncBackup": "Cloud Sync & Backup",
+  "@cloudSyncBackup": {
+    "description": "Pro feature: cloud sync and backup"
+  },
+  "chooseYourPlan": "Choose Your Plan",
+  "@chooseYourPlan": {
+    "description": "Subscription plan selection title"
+  },
+  "monthlyPlan": "Monthly Plan",
+  "@monthlyPlan": {
+    "description": "Monthly subscription plan"
+  },
+  "monthlyPrice": "$0.99/month",
+  "@monthlyPrice": {
+    "description": "Monthly subscription price"
+  },
+  "yearlyPlan": "Yearly Plan",
+  "@yearlyPlan": {
+    "description": "Yearly subscription plan"
+  },
+  "yearlyPrice": "$6.99/year",
+  "@yearlyPrice": {
+    "description": "Yearly subscription price"
+  },
+  "savingsText": "Save 42%",
+  "@savingsText": {
+    "description": "Savings text for yearly plan"
+  },
+  "restore": "Restore",
+  "@restore": {
+    "description": "Restore purchases button"
+  },
+  "popular": "Popular",
+  "@popular": {
+    "description": "Popular plan badge"
+  },
+  "processingPurchase": "Processing Purchase...",
+  "@processingPurchase": {
+    "description": "Purchase processing message"
+  },
+  "purchasePlaceholder": "Processing your purchase. Please wait...",
+  "@purchasePlaceholder": {
+    "description": "Purchase processing placeholder text"
+  },
+  "restorePlaceholder": "Restoring your purchases. Please wait...",
+  "@restorePlaceholder": {
+    "description": "Restore processing placeholder text"
   }
 }

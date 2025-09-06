@@ -304,4 +304,60 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get defaultRoutine => 'Default Routine';
+
+  @override
+  String get scheduleSpecificDaysFull =>
+      'Schedule routine for specific days (Mon-Sun)';
+
+  @override
+  String get advancedNotificationsFull =>
+      'Advanced notification with vibration';
+
+  @override
+  String get getUnlimitedAccess => 'Get Unlimited Access';
+
+  @override
+  String get removeAllAds => 'Remove all advertisements';
+
+  @override
+  String get scheduleSpecificDays => 'Schedule Specific Days';
+
+  @override
+  String get advancedNotifications => 'Advanced Notifications';
+
+  @override
+  String get cloudSyncBackup => 'Cloud Sync & Backup';
+
+  @override
+  String get chooseYourPlan => 'Choose Your Plan';
+
+  @override
+  String get monthlyPlan => 'Monthly Plan';
+
+  @override
+  String get monthlyPrice => '\$0.99/month';
+
+  @override
+  String get yearlyPlan => 'Yearly Plan';
+
+  @override
+  String get yearlyPrice => '\$6.99/year';
+
+  @override
+  String get savingsText => 'Save 42%';
+
+  @override
+  String get restore => 'Restore';
+
+  @override
+  String get popular => 'Popular';
+
+  @override
+  String get processingPurchase => 'Processing Purchase...';
+
+  @override
+  String get purchasePlaceholder => 'Processing your purchase. Please wait...';
+
+  @override
+  String get restorePlaceholder => 'Restoring your purchases. Please wait...';
 }

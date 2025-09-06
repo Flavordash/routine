@@ -9,6 +9,7 @@ import 'package:vibration/vibration.dart';
 import 'models/routine_slot_model.dart';
 import 'l10n/app_localizations.dart';
 import 'services/ad_service.dart';
+import 'services/purchase_service.dart';
 
 class TimeSlot {
   final String id;
@@ -91,6 +92,9 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget> with Tick
   late Animation<double> _sparkAnimation;
   final List<SparkParticle> _sparks = [];
 
+  // Purchase service
+  late PurchaseService _purchaseService;
+
   // Notification settings
   FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
       FlutterLocalNotificationsPlugin();
@@ -135,6 +139,7 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget> with Tick
     );
 
     _initializeNotifications();
+    _initializePurchaseService();
   }
 
   @override
@@ -1301,13 +1306,7 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget> with Tick
                                       ),
                                       onPressed: () {
                                         Navigator.of(context).pop();
-                                        // Add your upgrade to pro logic here
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          SnackBar(
-                                            content: Text('Upgrade to Pro to access alarm settings!'),
-                                            duration: const Duration(seconds: 2),
-                                          ),
-                                        );
+                                        _showUpgradeDialog();
                                       },
                                       child: Text(
                                         'Upgrade to PRO',
@@ -1673,12 +1672,405 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget> with Tick
     _sparkController.forward();
   }
 
+  void _showUpgradeDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(
+            color: Theme.of(context).colorScheme.onSurface,
+            width: 1,
+          ),
+        ),
+        title: Row(
+          children: [
+            Icon(
+              Icons.star,
+              color: Colors.amber,
+              size: 24,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              AppLocalizations.of(context)!.upgradeToProButton,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurface,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(AppLocalizations.of(context)!.proFeatures),
+            const SizedBox(height: 8),
+            Text(AppLocalizations.of(context)!.unlimitedSlots),
+            Text(AppLocalizations.of(context)!.scheduleSpecificDaysFull),
+            Text(AppLocalizations.of(context)!.duplicateRoutines),
+            Text(AppLocalizations.of(context)!.advancedNotificationsFull),
+            Text(AppLocalizations.of(context)!.prioritySupport),
+            Text(AppLocalizations.of(context)!.advancedCustomization),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              AppLocalizations.of(context)!.later,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _showSubscriptionDialog();
+            },
+            child: Text(AppLocalizations.of(context)!.upgradeNow),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showSubscriptionDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: Theme.of(context).colorScheme.surface,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: BorderSide(
+              color: Theme.of(context).colorScheme.onSurface,
+              width: 1,
+            ),
+          ),
+          title: Row(
+            children: [
+              Icon(
+                Icons.star,
+                color: Colors.amber,
+                size: 24,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                AppLocalizations.of(context)!.upgradeToProButton,
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  AppLocalizations.of(context)!.getUnlimitedAccess,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface,
+                    fontSize: 16,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                
+                // Pro Features List
+                _buildProFeature(Icons.block, AppLocalizations.of(context)!.removeAllAds),
+                _buildProFeature(Icons.all_inclusive, AppLocalizations.of(context)!.unlimitedSlots.substring(2)), // Remove the bullet point
+                _buildProFeature(Icons.calendar_today, AppLocalizations.of(context)!.scheduleSpecificDays),
+                _buildProFeature(Icons.notifications_active, AppLocalizations.of(context)!.advancedNotifications),
+                _buildProFeature(Icons.backup, AppLocalizations.of(context)!.cloudSyncBackup),
+                _buildProFeature(Icons.support, AppLocalizations.of(context)!.prioritySupport.substring(2)), // Remove the bullet point
+                
+                const SizedBox(height: 20),
+                
+                // Subscription Options
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.amber.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.amber, width: 2),
+                  ),
+                  child: Column(
+                    children: [
+                      Text(
+                        AppLocalizations.of(context)!.chooseYourPlan,
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      
+                      // Monthly Plan
+                      _buildSubscriptionOption(
+                        title: AppLocalizations.of(context)!.monthlyPlan,
+                        price: AppLocalizations.of(context)!.monthlyPrice,
+                        savings: null,
+                        isPopular: false,
+                        onTap: () => _purchaseSubscription(monthly: true),
+                      ),
+                      
+                      const SizedBox(height: 8),
+                      
+                      // Yearly Plan  
+                      _buildSubscriptionOption(
+                        title: AppLocalizations.of(context)!.yearlyPlan,
+                        price: AppLocalizations.of(context)!.yearlyPrice,
+                        savings: AppLocalizations.of(context)!.savingsText,
+                        isPopular: true,
+                        onTap: () => _purchaseSubscription(monthly: false),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(
+                AppLocalizations.of(context)!.later,
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                _restorePurchases();
+              },
+              child: Text(
+                AppLocalizations.of(context)!.restore,
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildProFeature(IconData icon, String text) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Icon(
+            icon,
+            size: 20,
+            color: Colors.green,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurface,
+                fontSize: 14,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSubscriptionOption({
+    required String title,
+    required String price,
+    String? savings,
+    required bool isPopular,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: isPopular 
+            ? Colors.amber.withValues(alpha: 0.2)
+            : Theme.of(context).colorScheme.surface,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isPopular ? Colors.amber : Colors.grey,
+            width: isPopular ? 2 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            if (isPopular)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.amber,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  AppLocalizations.of(context)!.popular,
+                  style: TextStyle(
+                    color: Colors.black,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            if (isPopular) const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                  ),
+                  Text(
+                    price,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurface,
+                      fontSize: 14,
+                    ),
+                  ),
+                  if (savings != null)
+                    Text(
+                      savings,
+                      style: TextStyle(
+                        color: Colors.green,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.arrow_forward_ios,
+              size: 16,
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _purchaseSubscription({required bool monthly}) {
+    Navigator.of(context).pop();
+    
+    // Show loading
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircularProgressIndicator(),
+            const SizedBox(height: 16),
+            Text(
+              AppLocalizations.of(context)!.processingPurchase,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    // Use actual purchase service
+    final productId = monthly 
+        ? PurchaseService.kMonthlySubscriptionId 
+        : PurchaseService.kYearlySubscriptionId;
+    _purchaseService.buySubscription(productId);
+  }
+
+  void _restorePurchases() {
+    Navigator.of(context).pop();
+    
+    // Use actual restore service
+    _purchaseService.restorePurchases();
+  }
+
+  void _initializePurchaseService() {
+    _purchaseService = PurchaseService();
+    _purchaseService.onPurchaseSuccess = () {
+      if (mounted) {
+        Navigator.of(context).pop(); // Close loading dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Purchase successful! You now have PRO access.'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        // Refresh the widget to show PRO features
+        setState(() {});
+      }
+    };
+    
+    _purchaseService.onPurchaseError = (error) {
+      if (mounted) {
+        Navigator.of(context).pop(); // Close loading dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Purchase failed: $error'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    };
+    
+    _purchaseService.onRestoreSuccess = () {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Purchases restored successfully!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        setState(() {});
+      }
+    };
+    
+    _purchaseService.onRestoreError = (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Restore failed: $error'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    };
+    
+    _purchaseService.initialize();
+  }
+
   @override
   void dispose() {
     _highlightController.dispose();
     _pulseController.dispose();
     _sparkController.dispose();
     _addButtonController.dispose();
+    _purchaseService.dispose();
     super.dispose();
   }
 
