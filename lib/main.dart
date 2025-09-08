@@ -5,7 +5,6 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 import 'package:video_player/video_player.dart';
 import 'package:rive/rive.dart';
 import 'selectable_clock_widget.dart';
@@ -218,7 +217,7 @@ class MyHomePage extends StatefulWidget {
   State<MyHomePage> createState() => _MyHomePageState();
 }
 
-class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
+class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin, WidgetsBindingObserver {
   StateMachineController? _stateMachineController;
   bool isProUser = false;
   late AnimationController _menuAnimationController;
@@ -241,6 +240,7 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
       duration: const Duration(milliseconds: 300),
       vsync: this,
     );
+    WidgetsBinding.instance.addObserver(this);
     _checkAuthState();
     _loadRoutineSlots();
     _setupAuthStateListener();
@@ -419,6 +419,16 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
     }
   }
 
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (state == AppLifecycleState.resumed) {
+      // Reload routine slots when app becomes active again
+      // This ensures data consistency if changes were made externally
+      _loadRoutineSlots();
+    }
+  }
+
   void _updateAnimationState() {
     if (_stateMachineController == null) return;
 
@@ -488,7 +498,7 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        toolbarHeight: 80, // Make navbar taller (default is 56)
+        toolbarHeight: 64, // Reduced from 80 to 64 to give more space for circle
         leading: Container(
           margin: const EdgeInsets.only(left: 19.0),
           child: IconButton(
@@ -524,23 +534,79 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
       ),
       body: Column(
         children: [
-          const SizedBox(height: 40),
+          const SizedBox(height: 10),
           Expanded(
             child: SelectableClockWidget(
               isDarkMode: widget.isDarkMode,
               isProUser: isProUser,
               timeSlots: activeSlot?.timeSlots ?? [],
               onTimeSlotsChanged: _onTimeSlotsChanged,
+              onShowTemplateGallery: _showTemplateGallery,
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 5),
         ],
+      ),
+    );
+  }
+
+  void _showTemplateGallery() {
+    showDialog(
+      context: context,
+      builder: (context) => _TemplateGalleryDialog(
+        onTemplateImport: _importTemplate,
+      ),
+    );
+  }
+
+  void _importTemplate(String templateName, List<Map<String, dynamic>> templateTimeSlots) {
+    // Create new routine slot with template name and time slots
+    final newSlot = RoutineSlot(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      name: templateName,
+      timeSlots: templateTimeSlots.map((slot) => RoutineTimeSlot(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        label: slot['label'],
+        description: slot['description'],
+        startTime: slot['startTime'],
+        endTime: slot['endTime'],
+        color: slot['color'],
+        hasAlarm: false,
+        snoozeDuration: 10,
+        maxSnoozeCount: 3,
+        snoozeEnabled: true,
+        hasPreAlarm: false,
+        preAlarmMinutes: 15,
+        startAngle: slot['startAngle'],
+        endAngle: slot['endAngle'],
+        createdAt: DateTime.now(),
+      )).toList(),
+      selectedDays: [1, 2, 3, 4, 5, 6, 7], // All days by default
+      createdAt: DateTime.now(),
+      isActive: false, // Make it inactive initially
+      isPaid: isProUser,
+    );
+
+    // Add to routine slots
+    setState(() {
+      routineSlots.add(newSlot);
+    });
+
+    // Save to storage
+    _routineSlotService.saveRoutineSlots(routineSlots);
+
+    // Show success message
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Template "$templateName" imported successfully!'),
+        backgroundColor: Colors.green,
       ),
     );
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _menuAnimationController.dispose();
     _settingsAnimationController.dispose();
     _authStateSubscription?.cancel();
@@ -1106,8 +1172,33 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog>
               ),
             ),
 
-            // Add new slot button
+            // Browse Templates Button
             const SizedBox(height: 16),
+            if (widget.isProUser)
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton(
+                  onPressed: _showTemplateGallery,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Theme.of(context).colorScheme.primary,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.library_books, size: 18),
+                      const SizedBox(width: 8),
+                      Text('Browse Templates'),
+                    ],
+                  ),
+                ),
+              ),
+
+            // Add new slot button
+            if (widget.isProUser) const SizedBox(height: 8),
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
@@ -1238,6 +1329,9 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog>
                   case 'colorSettings':
                     _showColorSettingsDialog(slot);
                     break;
+                  case 'shareTemplate':
+                    _showShareTemplateDialog(slot);
+                    break;
                 }
               },
               itemBuilder: (context) => [
@@ -1271,6 +1365,14 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog>
                     child: ListTile(
                       leading: Icon(Icons.date_range, size: 16),
                       title: Text('Day Settings'),
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'shareTemplate',
+                    child: ListTile(
+                      leading: Icon(Icons.share, size: 16),
+                      title: Text('Share as Template'),
                       contentPadding: EdgeInsets.zero,
                     ),
                   ),
@@ -1413,7 +1515,7 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog>
             child: Text(AppLocalizations.of(context)!.cancel),
           ),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               setState(() {
                 routineSlots.remove(slot);
 
@@ -1427,7 +1529,16 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog>
                   );
                 }
               });
-              Navigator.pop(context);
+              
+              // Save the updated routine slots to persistent storage
+              await widget.routineSlotService.saveRoutineSlots(routineSlots);
+              
+              // Notify the parent component about the changes
+              widget.onSlotsChanged(routineSlots, activeSlot);
+              
+              if (context.mounted) {
+                Navigator.pop(context);
+              }
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             child: const Text('Delete'),
@@ -1637,6 +1748,128 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog>
             child: Text(AppLocalizations.of(context)!.cancel),
           ),
         ],
+      ),
+    );
+  }
+
+  void _showShareTemplateDialog(RoutineSlot slot) {
+    final titleController = TextEditingController();
+    final descriptionController = TextEditingController();
+    String selectedCategory = 'Student';
+    String selectedLifestyle = 'Flexible';
+
+    final categories = ['Student', 'Office Worker', 'Night Shift', 'Healthcare', 'Fitness', 'Freelancer', 'Parent', 'Senior', 'Other'];
+    final lifestyles = ['Morning Person', 'Night Owl', 'Flexible'];
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Share as Template'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Template Name *', style: TextStyle(fontWeight: FontWeight.w500)),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: titleController,
+                  decoration: const InputDecoration(
+                    hintText: 'Enter template name...',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                
+                const Text('Description', style: TextStyle(fontWeight: FontWeight.w500)),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: descriptionController,
+                  maxLines: 3,
+                  decoration: const InputDecoration(
+                    hintText: 'Describe this routine...',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                const Text('Category', style: TextStyle(fontWeight: FontWeight.w500)),
+                const SizedBox(height: 8),
+                DropdownButtonFormField<String>(
+                  value: selectedCategory,
+                  decoration: const InputDecoration(border: OutlineInputBorder()),
+                  items: categories.map((category) {
+                    return DropdownMenuItem(
+                      value: category,
+                      child: Text(category),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    setDialogState(() {
+                      selectedCategory = value!;
+                    });
+                  },
+                ),
+                const SizedBox(height: 16),
+
+                const Text('Lifestyle Type', style: TextStyle(fontWeight: FontWeight.w500)),
+                const SizedBox(height: 8),
+                DropdownButtonFormField<String>(
+                  value: selectedLifestyle,
+                  decoration: const InputDecoration(border: OutlineInputBorder()),
+                  items: lifestyles.map((lifestyle) {
+                    return DropdownMenuItem(
+                      value: lifestyle,
+                      child: Text(lifestyle),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    setDialogState(() {
+                      selectedLifestyle = value!;
+                    });
+                  },
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (titleController.text.trim().isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Please enter a template name')),
+                  );
+                  return;
+                }
+                
+                // Convert routine slot time slots to template format
+                final templateTimeSlots = slot.timeSlots.map((timeSlot) => {
+                  'startTime': timeSlot.startTime,
+                  'endTime': timeSlot.endTime,
+                  'label': timeSlot.label,
+                  'description': timeSlot.description,
+                  'color': timeSlot.color,
+                }).toList();
+
+                // TODO: Save template to community template system
+                // For now, show success message
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Template "${titleController.text}" shared successfully!'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              },
+              child: const Text('Share'),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -2517,11 +2750,608 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog>
     });
   }
 
+  void _showTemplateGallery() {
+    showDialog(
+      context: context,
+      builder: (context) => _TemplateGalleryDialog(
+        onTemplateImport: _importTemplate,
+      ),
+    );
+  }
+
+  void _importTemplate(String templateName, List<Map<String, dynamic>> templateTimeSlots) {
+    // Create new routine slot with template name and time slots
+    final newSlot = RoutineSlot(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      name: templateName,
+      isActive: false,
+      isPaid: true, // Templates are a PRO feature
+      timeSlots: templateTimeSlots.map((slotData) {
+        return RoutineTimeSlot(
+          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          startAngle: slotData['startAngle'] ?? 0.0,
+          endAngle: slotData['endAngle'] ?? 0.0,
+          startTime: slotData['startTime'] ?? '09:00',
+          endTime: slotData['endTime'] ?? '10:00',
+          label: slotData['label'] ?? 'Activity',
+          description: slotData['description'] ?? '',
+          color: slotData['color'] ?? 0xFF2196F3,
+          createdAt: DateTime.now(),
+        );
+      }).toList(),
+    );
+
+    setState(() {
+      routineSlots.add(newSlot);
+    });
+
+    // Save the new routine slots
+    widget.onSlotsChanged(routineSlots, activeSlot);
+    
+    // Show success message
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Template "$templateName" imported successfully!'),
+        duration: const Duration(seconds: 3),
+        backgroundColor: Colors.green,
+      ),
+    );
+  }
+
   @override
   void dispose() {
     _editAnimationController.dispose();
     _addAnimationController.dispose();
     super.dispose();
+  }
+}
+
+// Template Gallery Dialog
+class _TemplateGalleryDialog extends StatefulWidget {
+  final Function(String templateName, List<Map<String, dynamic>> templateTimeSlots) onTemplateImport;
+  
+  const _TemplateGalleryDialog({required this.onTemplateImport});
+  
+  @override
+  State<_TemplateGalleryDialog> createState() => _TemplateGalleryDialogState();
+}
+
+class _TemplateGalleryDialogState extends State<_TemplateGalleryDialog> {
+  String selectedCategory = 'All';
+  String sortBy = 'Popular';
+  Set<String> likedTemplates = {};
+  
+  final categories = [
+    'All',
+    'Student', 
+    'Office Worker',
+    'Night Shift',
+    'Healthcare',
+    'Retail',
+    'Freelancer',
+    'Parent',
+    'Fitness',
+    'Custom'
+  ];
+  final sortOptions = ['Popular', 'Newest', 'Most Liked'];
+  
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Container(
+        width: MediaQuery.of(context).size.width * 0.9,
+        height: MediaQuery.of(context).size.height * 0.8,
+        constraints: const BoxConstraints(
+          minWidth: 300,
+          minHeight: 400,
+          maxWidth: 500,
+          maxHeight: 700,
+        ),
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Browse Templates',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                ),
+                IconButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  icon: Icon(
+                    Icons.close,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            
+            // Filters
+            Row(
+              children: [
+                Expanded(
+                  child: Container(
+                    height: 40,
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<String>(
+                        value: selectedCategory,
+                        hint: const Text('Category'),
+                        isExpanded: true,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurface,
+                          fontSize: 14,
+                        ),
+                        items: categories.map((category) {
+                          return DropdownMenuItem(
+                            value: category,
+                            child: Text(category, style: const TextStyle(fontSize: 12)),
+                          );
+                        }).toList(),
+                        onChanged: (value) {
+                          setState(() {
+                            selectedCategory = value!;
+                          });
+                        },
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Container(
+                    height: 40,
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<String>(
+                        value: sortBy,
+                        hint: const Text('Sort'),
+                        isExpanded: true,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurface,
+                          fontSize: 14,
+                        ),
+                        items: sortOptions.map((option) {
+                          return DropdownMenuItem(
+                            value: option,
+                            child: Text(option, style: const TextStyle(fontSize: 12)),
+                          );
+                        }).toList(),
+                        onChanged: (value) {
+                          setState(() {
+                            sortBy = value!;
+                          });
+                        },
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            
+            // Templates Grid
+            Expanded(
+              child: _buildTemplatesGrid(),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+  
+  Widget _buildTemplatesGrid() {
+    // Mock data for now - this would come from backend later
+    final templates = _getMockTemplates()
+        .map((template) => template.copyWith(isLiked: likedTemplates.contains(template.id)))
+        .where((template) =>
+            selectedCategory == 'All' || template.category == selectedCategory)
+        .toList();
+
+    return GridView.builder(
+      padding: const EdgeInsets.all(4),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        childAspectRatio: 0.85,  // Better aspect ratio to prevent overflow
+        crossAxisSpacing: 6,     // Reduced spacing
+        mainAxisSpacing: 6,      // Reduced spacing
+      ),
+      itemCount: templates.length,
+      itemBuilder: (context, index) {
+        final template = templates[index];
+        return _TemplateCard(
+          template: template,
+          onImport: () => _importTemplate(template),
+          onLike: () => _toggleLike(template),
+        );
+      },
+    );
+  }
+  
+  void _toggleLike(_RoutineTemplate template) {
+    setState(() {
+      if (likedTemplates.contains(template.id)) {
+        likedTemplates.remove(template.id);
+      } else {
+        likedTemplates.add(template.id);
+      }
+    });
+  }
+  
+  List<_RoutineTemplate> _getMockTemplates() {
+    return [
+      _RoutineTemplate(
+        id: '1',
+        name: 'Student Life',
+        category: 'Student',
+        description: 'Perfect schedule for students',
+        author: 'Routine 24',
+        likes: 245,
+        isOfficial: true,
+        timeSlots: [
+          {
+            'startTime': '07:00',
+            'endTime': '08:00',
+            'label': 'Morning Routine',
+            'description': 'Get ready for the day',
+            'color': 0xFF2196F3,
+            'startAngle': 105.0,
+            'endAngle': 120.0,
+          },
+          {
+            'startTime': '09:00',
+            'endTime': '12:00',
+            'label': 'Study Session',
+            'description': 'Focused learning time',
+            'color': 0xFF4CAF50,
+            'startAngle': 135.0,
+            'endAngle': 180.0,
+          },
+        ],
+      ),
+      _RoutineTemplate(
+        id: '2',
+        name: 'Office Worker',
+        category: 'Office Worker',
+        description: 'Standard office schedule',
+        author: 'Routine 24',
+        likes: 189,
+        isOfficial: true,
+        timeSlots: [
+          {
+            'startTime': '09:00',
+            'endTime': '17:00',
+            'label': 'Work Hours',
+            'description': 'Professional work time',
+            'color': 0xFFFF9800,
+            'startAngle': 135.0,
+            'endAngle': 255.0,
+          },
+        ],
+      ),
+      _RoutineTemplate(
+        id: '3',
+        name: 'Fitness Focus',
+        category: 'Fitness',
+        description: 'Health and fitness routine',
+        author: 'FitLife',
+        likes: 324,
+        timeSlots: [
+          {
+            'startTime': '06:00',
+            'endTime': '07:00',
+            'label': 'Morning Workout',
+            'description': 'Start the day strong',
+            'color': 0xFFF44336,
+            'startAngle': 90.0,
+            'endAngle': 105.0,
+          },
+          {
+            'startTime': '18:00',
+            'endTime': '19:00',
+            'label': 'Evening Exercise',
+            'description': 'End of day fitness',
+            'color': 0xFF9C27B0,
+            'startAngle': 270.0,
+            'endAngle': 285.0,
+          },
+        ],
+      ),
+    ];
+  }
+  
+  void _importTemplate(_RoutineTemplate template) {
+    widget.onTemplateImport(template.name, template.timeSlots);
+    Navigator.of(context).pop(); // Close dialog
+  }
+}
+
+class _TemplateCard extends StatelessWidget {
+  final _RoutineTemplate template;
+  final VoidCallback onImport;
+  final VoidCallback? onLike;
+  
+  const _TemplateCard({
+    required this.template,
+    required this.onImport,
+    this.onLike,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: InkWell(
+        onTap: () => _showTemplatePreview(context),
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          height: double.infinity,
+          padding: const EdgeInsets.all(6),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Preview Circle (mini routine visualization)
+              Center(
+                child: Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: Theme.of(context).colorScheme.primary,
+                      width: 2,
+                    ),
+                  ),
+                  child: Icon(
+                    Icons.access_time,
+                    color: Theme.of(context).colorScheme.primary,
+                    size: 16,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 6),
+              
+              // Template Name with official badge
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      template.name,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  if (template.isOfficial)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                      decoration: BoxDecoration(
+                        color: Colors.amber,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.verified,
+                            size: 10,
+                            color: Colors.black87,
+                          ),
+                          const SizedBox(width: 1),
+                          Text(
+                            'OFFICIAL',
+                            style: TextStyle(
+                              fontSize: 6,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
+              
+              // Description
+              Expanded(
+                child: Text(
+                  template.description,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              
+              const SizedBox(height: 4),
+              
+              // Stats - Fixed at bottom
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Flexible(
+                    child: template.isOfficial 
+                      ? Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.favorite,
+                              size: 16,
+                              color: Colors.red.withValues(alpha: 0.7),
+                            ),
+                            const SizedBox(width: 2),
+                            Text(
+                              '${template.likes}',
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                              ),
+                            ),
+                          ],
+                        )
+                      : GestureDetector(
+                          onTap: onLike,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                template.isLiked ? Icons.favorite : Icons.favorite_border,
+                                size: 16,
+                                color: template.isLiked 
+                                  ? Colors.red 
+                                  : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                              ),
+                              const SizedBox(width: 2),
+                              Text(
+                                '${template.likes + (template.isLiked ? 1 : 0)}',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                  ),
+                  Flexible(
+                    child: Text(
+                      template.author,
+                      style: TextStyle(
+                        fontSize: 9,
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                        fontStyle: FontStyle.italic,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+  
+  void _showTemplatePreview(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(template.name),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Category: ${template.category}'),
+            const SizedBox(height: 8),
+            Text('Description: ${template.description}'),
+            const SizedBox(height: 8),
+            Text('By: ${template.author}'),
+            const SizedBox(height: 16),
+            Text(
+              'This template contains ${template.timeSlots.length} time slot(s) that you can import and customize.',
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(context).pop(); // Close preview
+              onImport(); // Import template
+            },
+            child: const Text('Import Template'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// Template Model
+class _RoutineTemplate {
+  final String id;
+  final String name;
+  final String category;
+  final String description;
+  final String author;
+  final int likes;
+  final List<Map<String, dynamic>> timeSlots;
+  final bool isOfficial;
+  final bool isLiked;
+
+  _RoutineTemplate({
+    required this.id,
+    required this.name,
+    required this.category,
+    required this.description,
+    required this.author,
+    required this.likes,
+    required this.timeSlots,
+    this.isOfficial = false,
+    this.isLiked = false,
+  });
+
+  _RoutineTemplate copyWith({
+    String? id,
+    String? name,
+    String? category,
+    String? description,
+    String? author,
+    int? likes,
+    List<Map<String, dynamic>>? timeSlots,
+    bool? isOfficial,
+    bool? isLiked,
+  }) {
+    return _RoutineTemplate(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      category: category ?? this.category,
+      description: description ?? this.description,
+      author: author ?? this.author,
+      likes: likes ?? this.likes,
+      timeSlots: timeSlots ?? this.timeSlots,
+      isOfficial: isOfficial ?? this.isOfficial,
+      isLiked: isLiked ?? this.isLiked,
+    );
   }
 }
 

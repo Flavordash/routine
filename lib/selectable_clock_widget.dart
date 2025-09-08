@@ -68,6 +68,7 @@ class SelectableClockWidget extends StatefulWidget {
     this.isProUser = false,
     this.timeSlots = const [],
     this.onTimeSlotsChanged,
+    this.onShowTemplateGallery,
   });
 
   final bool isDarkMode;
@@ -75,6 +76,7 @@ class SelectableClockWidget extends StatefulWidget {
   final bool isProUser;
   final List<RoutineTimeSlot> timeSlots;
   final Function(List<RoutineTimeSlot>)? onTimeSlotsChanged;
+  final VoidCallback? onShowTemplateGallery;
 
   @override
   State<SelectableClockWidget> createState() => _SelectableClockWidgetState();
@@ -363,7 +365,7 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget> with Tick
             ),
           ),
         ),
-        const SizedBox(height: 30),
+        const SizedBox(height: 20),
         // Time Slots Cards Section
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -544,6 +546,149 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget> with Tick
     _showCreateTimeSlotModal();
   }
 
+  void _fillFreeTime() {
+    if (timeSlots.isEmpty) {
+      // If no time slots exist, fill entire 24-hour period with Free Time
+      final freeTimeSlot = TimeSlot(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        startHour: 0,
+        startMinute: 0,
+        endHour: 23,
+        endMinute: 59,
+        title: 'Free Time',
+        description: 'Available free time',
+        color: const Color(0xFF9E9E9E), // Gray color
+        notificationEnabled: false,
+        hasAlarm: false,
+        hasPreAlarm: false,
+        preAlarmMinutes: 15,
+        snoozeEnabled: true,
+        snoozeDuration: 10,
+        maxSnoozeCount: 3,
+      );
+      
+      final updatedSlots = List<TimeSlot>.from(timeSlots)..add(freeTimeSlot);
+      final routineTimeSlots = updatedSlots.map((slot) => _timeSlotToRoutineTimeSlot(slot)).toList();
+      widget.onTimeSlotsChanged?.call(routineTimeSlots);
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Filled 24-hour period with Free Time!'),
+          backgroundColor: Colors.green,
+        ),
+      );
+      return;
+    }
+
+    // Sort existing time slots by start time for gap analysis
+    final sortedSlots = List<TimeSlot>.from(timeSlots);
+    sortedSlots.sort((a, b) {
+      final aMinutes = a.startHour * 60 + a.startMinute;
+      final bMinutes = b.startHour * 60 + b.startMinute;
+      return aMinutes.compareTo(bMinutes);
+    });
+
+    List<TimeSlot> newFreeTimeSlots = [];
+    
+    // Check for gap at the beginning of the day
+    if (sortedSlots.first.startHour > 0 || sortedSlots.first.startMinute > 0) {
+      final freeSlot = TimeSlot(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        startHour: 0,
+        startMinute: 0,
+        endHour: sortedSlots.first.startHour,
+        endMinute: sortedSlots.first.startMinute,
+        title: 'Free Time',
+        description: 'Available free time',
+        color: const Color(0xFF9E9E9E),
+        notificationEnabled: false,
+        hasAlarm: false,
+        hasPreAlarm: false,
+        preAlarmMinutes: 15,
+        snoozeEnabled: true,
+        snoozeDuration: 10,
+        maxSnoozeCount: 3,
+      );
+      newFreeTimeSlots.add(freeSlot);
+    }
+
+    // Check for gaps between existing slots
+    for (int i = 0; i < sortedSlots.length - 1; i++) {
+      final currentSlot = sortedSlots[i];
+      final nextSlot = sortedSlots[i + 1];
+      
+      final currentEndMinutes = currentSlot.endHour * 60 + currentSlot.endMinute;
+      final nextStartMinutes = nextSlot.startHour * 60 + nextSlot.startMinute;
+      
+      if (nextStartMinutes > currentEndMinutes) {
+        final gapStartHour = currentSlot.endHour;
+        final gapStartMinute = currentSlot.endMinute;
+        
+        final freeSlot = TimeSlot(
+          id: (DateTime.now().millisecondsSinceEpoch + i).toString(),
+          startHour: gapStartHour,
+          startMinute: gapStartMinute,
+          endHour: nextSlot.startHour,
+          endMinute: nextSlot.startMinute,
+          title: 'Free Time',
+          description: 'Available free time',
+          color: const Color(0xFF9E9E9E),
+          notificationEnabled: false,
+          hasAlarm: false,
+          hasPreAlarm: false,
+          preAlarmMinutes: 15,
+          snoozeEnabled: true,
+          snoozeDuration: 10,
+          maxSnoozeCount: 3,
+        );
+        newFreeTimeSlots.add(freeSlot);
+      }
+    }
+
+    // Check for gap at the end of the day
+    final lastSlot = sortedSlots.last;
+    if (lastSlot.endHour < 23 || (lastSlot.endHour == 23 && lastSlot.endMinute < 59)) {
+      final freeSlot = TimeSlot(
+        id: (DateTime.now().millisecondsSinceEpoch + 9999).toString(),
+        startHour: lastSlot.endHour,
+        startMinute: lastSlot.endMinute,
+        endHour: 23,
+        endMinute: 59,
+        title: 'Free Time',
+        description: 'Available free time',
+        color: const Color(0xFF9E9E9E),
+        notificationEnabled: false,
+        hasAlarm: false,
+        hasPreAlarm: false,
+        preAlarmMinutes: 15,
+        snoozeEnabled: true,
+        snoozeDuration: 10,
+        maxSnoozeCount: 3,
+      );
+      newFreeTimeSlots.add(freeSlot);
+    }
+
+    if (newFreeTimeSlots.isNotEmpty) {
+      final updatedSlots = List<TimeSlot>.from(timeSlots)..addAll(newFreeTimeSlots);
+      final routineTimeSlots = updatedSlots.map((slot) => _timeSlotToRoutineTimeSlot(slot)).toList();
+      widget.onTimeSlotsChanged?.call(routineTimeSlots);
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Added ${newFreeTimeSlots.length} Free Time slot${newFreeTimeSlots.length > 1 ? 's' : ''}!'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No free time gaps found to fill'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+    }
+  }
+
   void _showCreateTimeSlotModal([TimeSlot? existingSlot]) {
     final titleController = TextEditingController(
       text: existingSlot?.title ?? '',
@@ -595,7 +740,11 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget> with Tick
                   color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
-              content: SingleChildScrollView(
+              content: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(context).size.height * 0.6,
+                ),
+                child: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1324,6 +1473,7 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget> with Tick
                       ),
                     ],
                   ],
+                ),
                 ),
               ),
               actions: [
@@ -2103,43 +2253,101 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget> with Tick
   }
 
   Widget _buildProBanner() {
-    return Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.2),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: const Icon(
-            Icons.star,
-            color: Colors.white,
-            size: 24,
-          ),
+        // Title row with star and PRO MEMBER text
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(
+                Icons.star,
+                color: Colors.white,
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              AppLocalizations.of(context)!.proMember,
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
         ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                AppLocalizations.of(context)!.proMember,
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
+        const SizedBox(height: 8),
+        // Buttons row
+        Row(
+          children: [
+            // Fill the free time button (50% width)
+            Expanded(
+              child: ElevatedButton(
+                onPressed: () {
+                  _fillFreeTime();
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  foregroundColor: Colors.amber[700],
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.auto_fix_high, size: 16),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Fill Free Time',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 2),
-              Text(
-                AppLocalizations.of(context)!.thanksForSupporting,
-                style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.9),
-                  fontSize: 12,
+            ),
+            const SizedBox(width: 6),
+            // Browse Templates button (50% width)
+            Expanded(
+              child: ElevatedButton(
+                onPressed: widget.onShowTemplateGallery,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  foregroundColor: Colors.amber[700],
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.library_books, size: 16),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Browse Templates',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ],
     );
