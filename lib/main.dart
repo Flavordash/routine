@@ -17,43 +17,44 @@ import 'models/user_model.dart';
 import 'models/routine_slot_model.dart';
 import 'firebase_options.dart';
 import 'l10n/app_localizations.dart';
+import 'template_service.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // Initialize timezone data for notifications
   tz.initializeTimeZones();
-  
+
   // Try to get user's timezone, fallback to device timezone
   try {
     final String timeZoneName = DateTime.now().timeZoneName;
     final locations = tz.timeZoneDatabase.locations;
-    
+
     // Try to find a matching timezone
     tz.Location? userLocation;
     for (final location in locations.values) {
-      if (location.name.contains(timeZoneName) || 
+      if (location.name.contains(timeZoneName) ||
           location.zones.any((zone) => zone.abbreviation == timeZoneName)) {
         userLocation = location;
         break;
       }
     }
-    
+
     // Set timezone (fallback to UTC if not found)
     tz.setLocalLocation(userLocation ?? tz.UTC);
   } catch (e) {
     // Fallback to UTC if anything goes wrong
     tz.setLocalLocation(tz.UTC);
   }
-  
+
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  
+
   // Initialize monetization services
   await AdService.instance.initialize();
   await SubscriptionService.instance.initialize();
-  
+
   runApp(const MyApp());
 }
 
@@ -217,7 +218,8 @@ class MyHomePage extends StatefulWidget {
   State<MyHomePage> createState() => _MyHomePageState();
 }
 
-class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin, WidgetsBindingObserver {
+class _MyHomePageState extends State<MyHomePage>
+    with TickerProviderStateMixin, WidgetsBindingObserver {
   StateMachineController? _stateMachineController;
   bool isProUser = false;
   late AnimationController _menuAnimationController;
@@ -248,8 +250,10 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin, 
 
   void _setupAuthStateListener() {
     _authStateSubscription = _authService.authStateChanges.listen((User? user) {
-      print('Auth state changed - User: ${user?.email}, Current Pro status: $isProUser');
-      
+      print(
+        'Auth state changed - User: ${user?.email}, Current Pro status: $isProUser',
+      );
+
       if (mounted) {
         setState(() {
           isLoggedIn = user != null;
@@ -267,7 +271,7 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin, 
             isProUser = false;
           });
           print('User logged in - Pro status temporarily reset to false');
-          
+
           // Add delay to ensure Firebase user data is available
           Future.delayed(const Duration(milliseconds: 1000), () {
             if (mounted) {
@@ -296,12 +300,12 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin, 
     final userData = await _authService.getUserData();
     final newProStatus = userData?['isPro'] ?? false;
     print('Loading user data - Pro status: $newProStatus, UserData: $userData');
-    
+
     setState(() {
       // Always update isProUser, defaulting to false for new users or null data
       isProUser = newProStatus;
     });
-    
+
     print('Pro status updated to: $isProUser');
   }
 
@@ -338,7 +342,6 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin, 
       _saveRoutineSlots();
     }
   }
-
 
   void _initializeTriggerInputs(StateMachineController controller) {
     // Try to find triggers with many possible names
@@ -406,8 +409,6 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin, 
     }
   }
 
-
-
   @override
   void didUpdateWidget(MyHomePage oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -453,10 +454,10 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin, 
     }
   }
 
-
   void _showHamburgerMenu(BuildContext context) {
     showDialog(
       context: context,
+      barrierColor: Colors.black54,
       barrierDismissible: true,
       builder: (BuildContext context) {
         return HamburgerMenuDialog(
@@ -482,6 +483,7 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin, 
   void _showSettings(BuildContext context) {
     showDialog(
       context: context,
+      barrierColor: Colors.black54,
       barrierDismissible: true,
       builder: (BuildContext context) {
         return SettingsDialog(
@@ -496,9 +498,11 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin, 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        toolbarHeight: 64, // Reduced from 80 to 64 to give more space for circle
+        toolbarHeight:
+            65, // Reduced from 80 to 64 to give more space for circle
         leading: Container(
           margin: const EdgeInsets.only(left: 19.0),
           child: IconButton(
@@ -534,7 +538,7 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin, 
       ),
       body: Column(
         children: [
-          const SizedBox(height: 10),
+          const SizedBox(height: 0),
           Expanded(
             child: SelectableClockWidget(
               isDarkMode: widget.isDarkMode,
@@ -544,7 +548,7 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin, 
               onShowTemplateGallery: _showTemplateGallery,
             ),
           ),
-          const SizedBox(height: 5),
+          const SizedBox(height: 20),
         ],
       ),
     );
@@ -553,34 +557,41 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin, 
   void _showTemplateGallery() {
     showDialog(
       context: context,
-      builder: (context) => _TemplateGalleryDialog(
-        onTemplateImport: _importTemplate,
-      ),
+      barrierColor: Colors.black54,
+      builder: (context) =>
+          _TemplateGalleryDialog(onTemplateImport: _importTemplate),
     );
   }
 
-  void _importTemplate(String templateName, List<Map<String, dynamic>> templateTimeSlots) {
+  void _importTemplate(
+    String templateName,
+    List<Map<String, dynamic>> templateTimeSlots,
+  ) {
     // Create new routine slot with template name and time slots
     final newSlot = RoutineSlot(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       name: templateName,
-      timeSlots: templateTimeSlots.map((slot) => RoutineTimeSlot(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        label: slot['label'],
-        description: slot['description'],
-        startTime: slot['startTime'],
-        endTime: slot['endTime'],
-        color: slot['color'],
-        hasAlarm: false,
-        snoozeDuration: 10,
-        maxSnoozeCount: 3,
-        snoozeEnabled: true,
-        hasPreAlarm: false,
-        preAlarmMinutes: 15,
-        startAngle: slot['startAngle'],
-        endAngle: slot['endAngle'],
-        createdAt: DateTime.now(),
-      )).toList(),
+      timeSlots: templateTimeSlots
+          .map(
+            (slot) => RoutineTimeSlot(
+              id: DateTime.now().millisecondsSinceEpoch.toString(),
+              label: slot['label'],
+              description: slot['description'],
+              startTime: slot['startTime'],
+              endTime: slot['endTime'],
+              color: slot['color'],
+              hasAlarm: false,
+              snoozeDuration: 10,
+              maxSnoozeCount: 3,
+              snoozeEnabled: true,
+              hasPreAlarm: false,
+              preAlarmMinutes: 15,
+              startAngle: slot['startAngle'],
+              endAngle: slot['endAngle'],
+              createdAt: DateTime.now(),
+            ),
+          )
+          .toList(),
       selectedDays: [1, 2, 3, 4, 5, 6, 7], // All days by default
       createdAt: DateTime.now(),
       isActive: false, // Make it inactive initially
@@ -1240,7 +1251,9 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog>
                     // Show upgrade dialog
                     _showUpgradeDialog();
                   },
-                  child: Text(AppLocalizations.of(context)!.upgradeToProUnlimited),
+                  child: Text(
+                    AppLocalizations.of(context)!.upgradeToProUnlimited,
+                  ),
                 ),
               ),
           ],
@@ -1254,18 +1267,18 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog>
       margin: const EdgeInsets.only(bottom: 8),
       color: slot.isActive
           ? (Theme.of(context).brightness == Brightness.light
-              ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.05)
-              : Theme.of(context).colorScheme.primary.withValues(alpha: 0.1))
+                ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.05)
+                : Theme.of(context).colorScheme.primary.withValues(alpha: 0.1))
           : null,
       child: ListTile(
         leading: GestureDetector(
           onTap: () => _showColorSettingsDialog(slot),
           child: CircleAvatar(
-            backgroundColor: slot.color != null 
+            backgroundColor: slot.color != null
                 ? Color(slot.color!)
                 : (slot.isActive
-                    ? Theme.of(context).colorScheme.primary
-                    : Colors.grey),
+                      ? Theme.of(context).colorScheme.primary
+                      : Colors.grey),
             radius: 12,
             child: slot.isActive
                 ? const Icon(Icons.check, size: 16, color: Colors.white)
@@ -1300,7 +1313,9 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog>
               Text(
                 _getDaysText(slot.selectedDays),
                 style: TextStyle(
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.4),
                   fontSize: 10,
                 ),
               ),
@@ -1438,6 +1453,7 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog>
 
     showDialog(
       context: context,
+      barrierColor: Colors.black54,
       builder: (context) => AlertDialog(
         title: const Text('Rename Routine'),
         content: TextField(
@@ -1495,7 +1511,9 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog>
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('${AppLocalizations.of(context)!.duplicate} "${slot.name}" successfully'),
+        content: Text(
+          '${AppLocalizations.of(context)!.duplicate} "${slot.name}" successfully',
+        ),
         backgroundColor: Colors.green,
       ),
     );
@@ -1506,6 +1524,7 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog>
 
     showDialog(
       context: context,
+      barrierColor: Colors.black54,
       builder: (context) => AlertDialog(
         title: const Text('Delete Routine'),
         content: Text('Are you sure you want to delete "${slot.name}"?'),
@@ -1529,13 +1548,13 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog>
                   );
                 }
               });
-              
+
               // Save the updated routine slots to persistent storage
               await widget.routineSlotService.saveRoutineSlots(routineSlots);
-              
+
               // Notify the parent component about the changes
               widget.onSlotsChanged(routineSlots, activeSlot);
-              
+
               if (context.mounted) {
                 Navigator.pop(context);
               }
@@ -1556,16 +1575,25 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog>
     final selectedAbbreviations = selectedDays
         .map((dayIndex) => dayAbbreviations[dayIndex - 1])
         .toList();
-    
+
     return selectedAbbreviations.join(', ');
   }
 
   void _showDaySettingsDialog(RoutineSlot slot) {
     List<int> selectedDays = List.from(slot.selectedDays);
-    final dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    final dayNames = [
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+      'Sunday',
+    ];
 
     showDialog(
       context: context,
+      barrierColor: Colors.black54,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) {
           return AlertDialog(
@@ -1610,9 +1638,13 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog>
               ElevatedButton(
                 onPressed: () {
                   setState(() {
-                    final index = routineSlots.indexWhere((s) => s.id == slot.id);
+                    final index = routineSlots.indexWhere(
+                      (s) => s.id == slot.id,
+                    );
                     if (index != -1) {
-                      routineSlots[index] = slot.copyWith(selectedDays: selectedDays);
+                      routineSlots[index] = slot.copyWith(
+                        selectedDays: selectedDays,
+                      );
                     }
                   });
                   widget.onSlotsChanged(routineSlots, activeSlot);
@@ -1651,6 +1683,7 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog>
 
     showDialog(
       context: context,
+      barrierColor: Colors.black54,
       builder: (context) => AlertDialog(
         title: Text('Choose Color for ${slot.name}'),
         content: SizedBox(
@@ -1669,7 +1702,9 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog>
                 return GestureDetector(
                   onTap: () {
                     setState(() {
-                      final slotIndex = routineSlots.indexWhere((s) => s.id == slot.id);
+                      final slotIndex = routineSlots.indexWhere(
+                        (s) => s.id == slot.id,
+                      );
                       if (slotIndex != -1) {
                         routineSlots[slotIndex] = slot.copyWith(color: null);
                       }
@@ -1678,7 +1713,9 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog>
                     Navigator.pop(context);
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text('Color reset to default for ${slot.name}'),
+                        content: Text(
+                          'Color reset to default for ${slot.name}',
+                        ),
                         duration: const Duration(seconds: 2),
                       ),
                     );
@@ -1692,7 +1729,10 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog>
                     child: const Center(
                       child: Text(
                         'Default',
-                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
                         textAlign: TextAlign.center,
                       ),
                     ),
@@ -1707,9 +1747,13 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog>
               return GestureDetector(
                 onTap: () {
                   setState(() {
-                    final slotIndex = routineSlots.indexWhere((s) => s.id == slot.id);
+                    final slotIndex = routineSlots.indexWhere(
+                      (s) => s.id == slot.id,
+                    );
                     if (slotIndex != -1) {
-                      routineSlots[slotIndex] = slot.copyWith(color: colorValue);
+                      routineSlots[slotIndex] = slot.copyWith(
+                        color: colorValue,
+                      );
                     }
                   });
                   widget.onSlotsChanged(routineSlots, activeSlot);
@@ -1725,16 +1769,26 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog>
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: color,
-                    border: isSelected 
+                    border: isSelected
                         ? Border.all(color: Colors.white, width: 3)
                         : null,
                     boxShadow: isSelected
-                        ? [BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 2))]
+                        ? [
+                            BoxShadow(
+                              color: Colors.black26,
+                              blurRadius: 4,
+                              offset: Offset(0, 2),
+                            ),
+                          ]
                         : null,
                   ),
                   child: isSelected
                       ? const Center(
-                          child: Icon(Icons.check, color: Colors.white, size: 20),
+                          child: Icon(
+                            Icons.check,
+                            color: Colors.white,
+                            size: 20,
+                          ),
                         )
                       : null,
                 ),
@@ -1755,14 +1809,15 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog>
   void _showShareTemplateDialog(RoutineSlot slot) {
     final titleController = TextEditingController();
     final descriptionController = TextEditingController();
-    String selectedCategory = 'Student';
-    String selectedLifestyle = 'Flexible';
+    String selectedCategory = TemplateService.categories.first;
+    String selectedLifestyle = TemplateService.lifestyleTypes.first;
 
-    final categories = ['Student', 'Office Worker', 'Night Shift', 'Healthcare', 'Fitness', 'Freelancer', 'Parent', 'Senior', 'Other'];
-    final lifestyles = ['Morning Person', 'Night Owl', 'Flexible'];
+    final categories = TemplateService.categories;
+    final lifestyles = TemplateService.lifestyleTypes;
 
     showDialog(
       context: context,
+      barrierColor: Colors.black54,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
           title: const Text('Share as Template'),
@@ -1771,7 +1826,10 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog>
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Template Name *', style: TextStyle(fontWeight: FontWeight.w500)),
+                const Text(
+                  'Template Name *',
+                  style: TextStyle(fontWeight: FontWeight.w500),
+                ),
                 const SizedBox(height: 8),
                 TextField(
                   controller: titleController,
@@ -1781,8 +1839,11 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog>
                   ),
                 ),
                 const SizedBox(height: 16),
-                
-                const Text('Description', style: TextStyle(fontWeight: FontWeight.w500)),
+
+                const Text(
+                  'Description',
+                  style: TextStyle(fontWeight: FontWeight.w500),
+                ),
                 const SizedBox(height: 8),
                 TextField(
                   controller: descriptionController,
@@ -1794,11 +1855,16 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog>
                 ),
                 const SizedBox(height: 16),
 
-                const Text('Category', style: TextStyle(fontWeight: FontWeight.w500)),
+                const Text(
+                  'Category',
+                  style: TextStyle(fontWeight: FontWeight.w500),
+                ),
                 const SizedBox(height: 8),
                 DropdownButtonFormField<String>(
-                  value: selectedCategory,
-                  decoration: const InputDecoration(border: OutlineInputBorder()),
+                  initialValue: selectedCategory,
+                  decoration: const InputDecoration(
+                    border: OutlineInputBorder(),
+                  ),
                   items: categories.map((category) {
                     return DropdownMenuItem(
                       value: category,
@@ -1813,11 +1879,16 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog>
                 ),
                 const SizedBox(height: 16),
 
-                const Text('Lifestyle Type', style: TextStyle(fontWeight: FontWeight.w500)),
+                const Text(
+                  'Lifestyle Type',
+                  style: TextStyle(fontWeight: FontWeight.w500),
+                ),
                 const SizedBox(height: 8),
                 DropdownButtonFormField<String>(
-                  value: selectedLifestyle,
-                  decoration: const InputDecoration(border: OutlineInputBorder()),
+                  initialValue: selectedLifestyle,
+                  decoration: const InputDecoration(
+                    border: OutlineInputBorder(),
+                  ),
                   items: lifestyles.map((lifestyle) {
                     return DropdownMenuItem(
                       value: lifestyle,
@@ -1839,30 +1910,65 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog>
               child: const Text('Cancel'),
             ),
             ElevatedButton(
-              onPressed: () {
-                if (titleController.text.trim().isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Please enter a template name')),
+              onPressed: () async {
+                final currentContext = context;
+                final templateName = titleController.text.trim();
+
+                if (templateName.isEmpty) {
+                  ScaffoldMessenger.of(currentContext).showSnackBar(
+                    const SnackBar(
+                      content: Text('Please enter a template name'),
+                    ),
                   );
                   return;
                 }
-                
-                // Convert routine slot time slots to template format
-                final templateTimeSlots = slot.timeSlots.map((timeSlot) => {
-                  'startTime': timeSlot.startTime,
-                  'endTime': timeSlot.endTime,
-                  'label': timeSlot.label,
-                  'description': timeSlot.description,
-                  'color': timeSlot.color,
-                }).toList();
 
-                // TODO: Save template to community template system
-                // For now, show success message
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
+                // Show loading dialog
+                showDialog(
+                  context: currentContext,
+                  barrierDismissible: false,
+                  barrierColor: Colors.black54,
+                  builder: (context) => AlertDialog(
+                    backgroundColor: Theme.of(context).colorScheme.surface,
+                    content: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        CircularProgressIndicator(),
+                        const SizedBox(height: 16),
+                        Text('Sharing template...'),
+                      ],
+                    ),
+                  ),
+                );
+
+                // Convert routine slot time slots to template format
+                final templateTimeSlots = TemplateService.timeSlotsToMap(
+                  slot.timeSlots,
+                );
+
+                // Save template to Firebase
+                final success = await TemplateService.shareTemplate(
+                  title: templateName,
+                  description: descriptionController.text.trim(),
+                  category: selectedCategory,
+                  lifestyle: selectedLifestyle,
+                  timeSlots: templateTimeSlots,
+                );
+
+                // Close loading dialog
+                Navigator.pop(currentContext);
+                // Close share dialog
+                Navigator.pop(currentContext);
+
+                // Show success or error message
+                ScaffoldMessenger.of(currentContext).showSnackBar(
                   SnackBar(
-                    content: Text('Template "${titleController.text}" shared successfully!'),
-                    backgroundColor: Colors.green,
+                    content: Text(
+                      success
+                          ? 'Template "$templateName" shared successfully!'
+                          : 'Failed to share template. Please try again.',
+                    ),
+                    backgroundColor: success ? Colors.green : Colors.red,
                   ),
                 );
               },
@@ -1877,6 +1983,7 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog>
   void _showUpgradeDialog() {
     showDialog(
       context: context,
+      barrierColor: Colors.black54,
       builder: (context) => AlertDialog(
         title: Text(AppLocalizations.of(context)!.upgradeToProButton),
         content: Column(
@@ -2094,6 +2201,7 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog>
 
     showDialog(
       context: context,
+      barrierColor: Colors.black54,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
           title: Text(AppLocalizations.of(context)!.signIn),
@@ -2244,6 +2352,7 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog>
 
     showDialog(
       context: context,
+      barrierColor: Colors.black54,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
           title: Text(AppLocalizations.of(context)!.signUp),
@@ -2443,6 +2552,7 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog>
   void _showSubscriptionDialog() {
     showDialog(
       context: context,
+      barrierColor: Colors.black54,
       barrierDismissible: true,
       builder: (BuildContext context) {
         return AlertDialog(
@@ -2456,11 +2566,7 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog>
           ),
           title: Row(
             children: [
-              Icon(
-                Icons.star,
-                color: Colors.amber,
-                size: 24,
-              ),
+              Icon(Icons.star, color: Colors.amber, size: 24),
               const SizedBox(width: 8),
               Text(
                 AppLocalizations.of(context)!.upgradeToProButton,
@@ -2484,17 +2590,37 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog>
                   ),
                 ),
                 const SizedBox(height: 16),
-                
+
                 // Pro Features List
-                _buildProFeature(context, Icons.block, 'Remove all advertisements'),
-                _buildProFeature(context, Icons.all_inclusive, AppLocalizations.of(context)!.unlimitedSlots.substring(2)), // Remove the bullet point
-                _buildProFeature(context, Icons.calendar_today, 'Schedule routines for specific days'),
-                _buildProFeature(context, Icons.notifications_active, 'Advanced notifications with vibration'),
+                _buildProFeature(
+                  context,
+                  Icons.block,
+                  'Remove all advertisements',
+                ),
+                _buildProFeature(
+                  context,
+                  Icons.all_inclusive,
+                  AppLocalizations.of(context)!.unlimitedSlots.substring(2),
+                ), // Remove the bullet point
+                _buildProFeature(
+                  context,
+                  Icons.calendar_today,
+                  'Schedule routines for specific days',
+                ),
+                _buildProFeature(
+                  context,
+                  Icons.notifications_active,
+                  'Advanced notifications with vibration',
+                ),
                 _buildProFeature(context, Icons.backup, 'Cloud sync backup'),
-                _buildProFeature(context, Icons.support, AppLocalizations.of(context)!.prioritySupport.substring(2)), // Remove the bullet point
-                
+                _buildProFeature(
+                  context,
+                  Icons.support,
+                  AppLocalizations.of(context)!.prioritySupport.substring(2),
+                ), // Remove the bullet point
+
                 const SizedBox(height: 20),
-                
+
                 // Subscription Options
                 Container(
                   padding: const EdgeInsets.all(16),
@@ -2514,7 +2640,7 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog>
                         ),
                       ),
                       const SizedBox(height: 12),
-                      
+
                       // Monthly Plan
                       _buildSubscriptionOption(
                         context,
@@ -2524,10 +2650,10 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog>
                         isPopular: false,
                         onTap: () => _purchaseSubscription(monthly: true),
                       ),
-                      
+
                       const SizedBox(height: 8),
-                      
-                      // Yearly Plan  
+
+                      // Yearly Plan
                       _buildSubscriptionOption(
                         context,
                         title: 'Yearly Plan',
@@ -2559,9 +2685,7 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog>
               },
               child: Text(
                 'Restore',
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.primary,
-                ),
+                style: TextStyle(color: Theme.of(context).colorScheme.primary),
               ),
             ),
           ],
@@ -2575,11 +2699,7 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog>
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
-          Icon(
-            icon,
-            size: 20,
-            color: Colors.green,
-          ),
+          Icon(icon, size: 20, color: Colors.green),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
@@ -2608,9 +2728,9 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog>
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: isPopular 
-            ? Colors.amber.withValues(alpha: 0.2)
-            : Theme.of(context).colorScheme.surface,
+          color: isPopular
+              ? Colors.amber.withValues(alpha: 0.2)
+              : Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
             color: isPopular ? Colors.amber : Colors.grey,
@@ -2679,10 +2799,11 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog>
 
   void _purchaseSubscription({required bool monthly}) {
     Navigator.of(context).pop();
-    
+
     // Show loading
     showDialog(
       context: context,
+      barrierColor: Colors.black54,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
@@ -2693,9 +2814,7 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog>
             const SizedBox(height: 16),
             Text(
               'Processing purchase...',
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
             ),
           ],
         ),
@@ -2703,63 +2822,72 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog>
     );
 
     // Attempt purchase
-    SubscriptionService.instance.purchaseSubscription(yearly: !monthly).then((_) {
-      if (mounted) {
-        Navigator.of(context).pop(); // Close loading dialog
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Welcome to Pro! 🎉'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
-    }).catchError((error) {
-      if (mounted) {
-        Navigator.of(context).pop(); // Close loading dialog
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Purchase failed: $error'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    });
+    SubscriptionService.instance
+        .purchaseSubscription(yearly: !monthly)
+        .then((_) {
+          if (mounted) {
+            Navigator.of(context).pop(); // Close loading dialog
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Welcome to Pro! 🎉'),
+                backgroundColor: Colors.green,
+              ),
+            );
+          }
+        })
+        .catchError((error) {
+          if (mounted) {
+            Navigator.of(context).pop(); // Close loading dialog
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Purchase failed: $error'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        });
   }
 
   void _restorePurchases() {
     Navigator.of(context).pop();
-    
-    SubscriptionService.instance.restorePurchases().then((_) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Purchases restored successfully'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
-    }).catchError((error) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Restore failed: $error'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    });
+
+    SubscriptionService.instance
+        .restorePurchases()
+        .then((_) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Purchases restored successfully'),
+                backgroundColor: Colors.green,
+              ),
+            );
+          }
+        })
+        .catchError((error) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Restore failed: $error'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        });
   }
 
   void _showTemplateGallery() {
     showDialog(
       context: context,
-      builder: (context) => _TemplateGalleryDialog(
-        onTemplateImport: _importTemplate,
-      ),
+      barrierColor: Colors.black54,
+      builder: (context) =>
+          _TemplateGalleryDialog(onTemplateImport: _importTemplate),
     );
   }
 
-  void _importTemplate(String templateName, List<Map<String, dynamic>> templateTimeSlots) {
+  void _importTemplate(
+    String templateName,
+    List<Map<String, dynamic>> templateTimeSlots,
+  ) {
     // Create new routine slot with template name and time slots
     final newSlot = RoutineSlot(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
@@ -2782,18 +2910,41 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog>
     );
 
     setState(() {
-      routineSlots.add(newSlot);
+      // Deactivate current active slot
+      if (activeSlot != null) {
+        final inactiveSlotIndex = routineSlots.indexOf(activeSlot!);
+        if (inactiveSlotIndex != -1) {
+          routineSlots[inactiveSlotIndex] = activeSlot!.copyWith(
+            isActive: false,
+          );
+        }
+      }
+
+      // Create new slot with active status
+      final activeNewSlot = newSlot.copyWith(isActive: true);
+      routineSlots.add(activeNewSlot);
+      activeSlot = activeNewSlot;
     });
 
     // Save the new routine slots
     widget.onSlotsChanged(routineSlots, activeSlot);
-    
-    // Show success message
+
+    // Show success message with info about auto-activation
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Template "$templateName" imported successfully!'),
+        content: Text(
+          'Template "$templateName" imported and activated successfully!',
+        ),
         duration: const Duration(seconds: 3),
         backgroundColor: Colors.green,
+        action: SnackBarAction(
+          label: 'VIEW',
+          textColor: Colors.white,
+          onPressed: () {
+            // Scroll to show the newly activated routine in the hamburger menu
+            // The routine is already active, so it will be visible
+          },
+        ),
       ),
     );
   }
@@ -2808,40 +2959,111 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog>
 
 // Template Gallery Dialog
 class _TemplateGalleryDialog extends StatefulWidget {
-  final Function(String templateName, List<Map<String, dynamic>> templateTimeSlots) onTemplateImport;
-  
+  final Function(
+    String templateName,
+    List<Map<String, dynamic>> templateTimeSlots,
+  )
+  onTemplateImport;
+
   const _TemplateGalleryDialog({required this.onTemplateImport});
-  
+
   @override
   State<_TemplateGalleryDialog> createState() => _TemplateGalleryDialogState();
 }
 
 class _TemplateGalleryDialogState extends State<_TemplateGalleryDialog> {
   String selectedCategory = 'All';
-  String sortBy = 'Popular';
-  Set<String> likedTemplates = {};
-  
-  final categories = [
-    'All',
-    'Student', 
-    'Office Worker',
-    'Night Shift',
-    'Healthcare',
-    'Retail',
-    'Freelancer',
-    'Parent',
-    'Fitness',
-    'Custom'
-  ];
-  final sortOptions = ['Popular', 'Newest', 'Most Liked'];
-  
+  String selectedLifestyle = 'All';
+  String searchQuery = '';
+  bool isLoading = true;
+  List<Template> templates = [];
+  List<Template> filteredTemplates = [];
+  final TextEditingController _searchController = TextEditingController();
+
+  final categories = ['All', ...TemplateService.categories];
+  final lifestyles = ['All', ...TemplateService.lifestyleTypes];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTemplates();
+    _searchController.addListener(_onSearchChanged);
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _onSearchChanged() {
+    setState(() {
+      searchQuery = _searchController.text;
+      _filterTemplates();
+    });
+  }
+
+  Future<void> _loadTemplates() async {
+    setState(() {
+      isLoading = true;
+    });
+
+    try {
+      final firebaseTemplates = await TemplateService.getTemplates();
+      final mockTemplatesConverted = _convertMockTemplatesToFirebase();
+
+      setState(() {
+        // Combine Firebase templates with converted mock templates (mock templates first for priority)
+        templates = [...mockTemplatesConverted, ...firebaseTemplates];
+        _filterTemplates();
+        isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        // If Firebase fails, still show mock templates
+        templates = _convertMockTemplatesToFirebase();
+        _filterTemplates();
+        isLoading = false;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to load some templates: $e'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+    }
+  }
+
+  void _filterTemplates() {
+    filteredTemplates = templates.where((template) {
+      // Category filter
+      final categoryMatch =
+          selectedCategory == 'All' || template.category == selectedCategory;
+
+      // Lifestyle filter
+      final lifestyleMatch =
+          selectedLifestyle == 'All' || template.lifestyle == selectedLifestyle;
+
+      // Search filter
+      final searchMatch =
+          searchQuery.isEmpty ||
+          template.title.toLowerCase().contains(searchQuery.toLowerCase()) ||
+          template.description.toLowerCase().contains(
+            searchQuery.toLowerCase(),
+          ) ||
+          template.authorName.toLowerCase().contains(searchQuery.toLowerCase());
+
+      return categoryMatch && lifestyleMatch && searchMatch;
+    }).toList();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Dialog(
       backgroundColor: Theme.of(context).colorScheme.surface,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Container(
         width: MediaQuery.of(context).size.width * 0.9,
         height: MediaQuery.of(context).size.height * 0.8,
@@ -2851,7 +3073,7 @@ class _TemplateGalleryDialogState extends State<_TemplateGalleryDialog> {
           maxWidth: 500,
           maxHeight: 700,
         ),
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -2877,7 +3099,32 @@ class _TemplateGalleryDialogState extends State<_TemplateGalleryDialog> {
               ],
             ),
             const SizedBox(height: 16),
-            
+
+            // Search Bar
+            TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'Search templates, authors...',
+                prefixIcon: Icon(Icons.search),
+                suffixIcon: searchQuery.isNotEmpty
+                    ? IconButton(
+                        icon: Icon(Icons.clear),
+                        onPressed: () {
+                          _searchController.clear();
+                        },
+                      )
+                    : null,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                contentPadding: EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+
             // Filters
             Row(
               children: [
@@ -2901,12 +3148,16 @@ class _TemplateGalleryDialogState extends State<_TemplateGalleryDialog> {
                         items: categories.map((category) {
                           return DropdownMenuItem(
                             value: category,
-                            child: Text(category, style: const TextStyle(fontSize: 12)),
+                            child: Text(
+                              category,
+                              style: const TextStyle(fontSize: 12),
+                            ),
                           );
                         }).toList(),
                         onChanged: (value) {
                           setState(() {
                             selectedCategory = value!;
+                            _filterTemplates();
                           });
                         },
                       ),
@@ -2924,22 +3175,26 @@ class _TemplateGalleryDialogState extends State<_TemplateGalleryDialog> {
                     ),
                     child: DropdownButtonHideUnderline(
                       child: DropdownButton<String>(
-                        value: sortBy,
-                        hint: const Text('Sort'),
+                        value: selectedLifestyle,
+                        hint: const Text('Lifestyle'),
                         isExpanded: true,
                         style: TextStyle(
                           color: Theme.of(context).colorScheme.onSurface,
                           fontSize: 14,
                         ),
-                        items: sortOptions.map((option) {
+                        items: lifestyles.map((lifestyle) {
                           return DropdownMenuItem(
-                            value: option,
-                            child: Text(option, style: const TextStyle(fontSize: 12)),
+                            value: lifestyle,
+                            child: Text(
+                              lifestyle,
+                              style: const TextStyle(fontSize: 12),
+                            ),
                           );
                         }).toList(),
                         onChanged: (value) {
                           setState(() {
-                            sortBy = value!;
+                            selectedLifestyle = value!;
+                            _filterTemplates();
                           });
                         },
                       ),
@@ -2949,55 +3204,122 @@ class _TemplateGalleryDialogState extends State<_TemplateGalleryDialog> {
               ],
             ),
             const SizedBox(height: 16),
-            
+
             // Templates Grid
-            Expanded(
-              child: _buildTemplatesGrid(),
-            ),
+            Expanded(child: _buildTemplatesGrid()),
           ],
         ),
       ),
     );
   }
-  
+
   Widget _buildTemplatesGrid() {
-    // Mock data for now - this would come from backend later
-    final templates = _getMockTemplates()
-        .map((template) => template.copyWith(isLiked: likedTemplates.contains(template.id)))
-        .where((template) =>
-            selectedCategory == 'All' || template.category == selectedCategory)
-        .toList();
+    if (isLoading) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 16),
+            Text('Loading templates...'),
+          ],
+        ),
+      );
+    }
+
+    if (filteredTemplates.isEmpty && templates.isNotEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.search_off, size: 48, color: Colors.grey),
+            SizedBox(height: 16),
+            Text('No templates found'),
+            if (searchQuery.isNotEmpty ||
+                selectedCategory != 'All' ||
+                selectedLifestyle != 'All')
+              TextButton(
+                onPressed: () {
+                  setState(() {
+                    _searchController.clear();
+                    selectedCategory = 'All';
+                    selectedLifestyle = 'All';
+                    searchQuery = '';
+                    _filterTemplates();
+                  });
+                },
+                child: Text('Clear filters'),
+              ),
+          ],
+        ),
+      );
+    }
+
+    if (templates.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.cloud_off, size: 48, color: Colors.grey),
+            SizedBox(height: 16),
+            Text('No templates available'),
+            TextButton(onPressed: _loadTemplates, child: Text('Retry')),
+          ],
+        ),
+      );
+    }
 
     return GridView.builder(
-      padding: const EdgeInsets.all(4),
+      padding: const EdgeInsets.all(2),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
-        childAspectRatio: 0.85,  // Better aspect ratio to prevent overflow
-        crossAxisSpacing: 6,     // Reduced spacing
-        mainAxisSpacing: 6,      // Reduced spacing
+        childAspectRatio: 1,
+        crossAxisSpacing: 4,
+        mainAxisSpacing: 6,
       ),
-      itemCount: templates.length,
+      itemCount: filteredTemplates.length,
       itemBuilder: (context, index) {
-        final template = templates[index];
-        return _TemplateCard(
+        final template = filteredTemplates[index];
+        return _FirebaseTemplateCard(
           template: template,
-          onImport: () => _importTemplate(template),
-          onLike: () => _toggleLike(template),
+          onImport: () => _importFirebaseTemplate(template),
+          onLike: () => _likeTemplate(template),
         );
       },
     );
   }
-  
-  void _toggleLike(_RoutineTemplate template) {
-    setState(() {
-      if (likedTemplates.contains(template.id)) {
-        likedTemplates.remove(template.id);
-      } else {
-        likedTemplates.add(template.id);
-      }
-    });
+
+  void _importFirebaseTemplate(Template template) {
+    // Convert Firebase template to widget format
+    widget.onTemplateImport(template.title, template.timeSlots);
   }
-  
+
+  void _likeTemplate(Template template) async {
+    final success = await TemplateService.likeTemplate(template.id);
+    if (success) {
+      setState(() {
+        // Update the template in our local list
+        final index = templates.indexWhere((t) => t.id == template.id);
+        if (index != -1) {
+          templates[index] = Template(
+            id: template.id,
+            title: template.title,
+            description: template.description,
+            category: template.category,
+            lifestyle: template.lifestyle,
+            authorId: template.authorId,
+            authorName: template.authorName,
+            timeSlots: template.timeSlots,
+            likes: template.likes + 1,
+            isOfficial: template.isOfficial,
+            createdAt: template.createdAt,
+          );
+          _filterTemplates();
+        }
+      });
+    }
+  }
+
   List<_RoutineTemplate> _getMockTemplates() {
     return [
       _RoutineTemplate(
@@ -3079,7 +3401,48 @@ class _TemplateGalleryDialogState extends State<_TemplateGalleryDialog> {
       ),
     ];
   }
-  
+
+  List<Template> _convertMockTemplatesToFirebase() {
+    final mockTemplates = _getMockTemplates();
+
+    return mockTemplates.map((mockTemplate) {
+      // Convert timeSlots to the format expected by Firebase Template
+      final convertedTimeSlots = mockTemplate.timeSlots.map((slot) {
+        return {
+          'id': slot['id'] ?? '',
+          'startAngle': slot['startAngle'] ?? 0.0,
+          'endAngle': slot['endAngle'] ?? 0.0,
+          'startTime': slot['startTime'] ?? '',
+          'endTime': slot['endTime'] ?? '',
+          'label': slot['label'] ?? '',
+          'description': slot['description'] ?? '',
+          'color': slot['color'] ?? 0xFF2196F3,
+          'hasAlarm': slot['hasAlarm'] ?? false,
+          'hasPreAlarm': slot['hasPreAlarm'] ?? false,
+          'preAlarmMinutes': slot['preAlarmMinutes'] ?? 15,
+          'snoozeEnabled': slot['snoozeEnabled'] ?? true,
+          'snoozeDuration': slot['snoozeDuration'] ?? 10,
+          'maxSnoozeCount': slot['maxSnoozeCount'] ?? 3,
+          'createdAt': DateTime.now().toIso8601String(),
+        };
+      }).toList();
+
+      return Template(
+        id: 'app_${mockTemplate.id}', // Prefix to identify app-provided templates
+        title: mockTemplate.name,
+        description: mockTemplate.description,
+        category: mockTemplate.category,
+        lifestyle: 'Balanced', // Default lifestyle for app templates
+        authorId: 'routine24_official',
+        authorName: 'Routine 24',
+        timeSlots: convertedTimeSlots,
+        likes: mockTemplate.likes,
+        isOfficial: true, // Mark as official/app-provided
+        createdAt: DateTime.now(),
+      );
+    }).toList();
+  }
+
   void _importTemplate(_RoutineTemplate template) {
     widget.onTemplateImport(template.name, template.timeSlots);
     Navigator.of(context).pop(); // Close dialog
@@ -3090,7 +3453,7 @@ class _TemplateCard extends StatelessWidget {
   final _RoutineTemplate template;
   final VoidCallback onImport;
   final VoidCallback? onLike;
-  
+
   const _TemplateCard({
     required this.template,
     required this.onImport,
@@ -3101,9 +3464,7 @@ class _TemplateCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       child: InkWell(
         onTap: () => _showTemplatePreview(context),
         borderRadius: BorderRadius.circular(8),
@@ -3120,7 +3481,9 @@ class _TemplateCard extends StatelessWidget {
                   width: 32,
                   height: 32,
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.primary.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                     border: Border.all(
                       color: Theme.of(context).colorScheme.primary,
@@ -3135,7 +3498,7 @@ class _TemplateCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 6),
-              
+
               // Template Name with official badge
               Row(
                 children: [
@@ -3153,7 +3516,10 @@ class _TemplateCard extends StatelessWidget {
                   ),
                   if (template.isOfficial)
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 4,
+                        vertical: 1,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.amber,
                         borderRadius: BorderRadius.circular(8),
@@ -3161,11 +3527,7 @@ class _TemplateCard extends StatelessWidget {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(
-                            Icons.verified,
-                            size: 10,
-                            color: Colors.black87,
-                          ),
+                          Icon(Icons.verified, size: 10, color: Colors.black87),
                           const SizedBox(width: 1),
                           Text(
                             'OFFICIAL',
@@ -3180,76 +3542,87 @@ class _TemplateCard extends StatelessWidget {
                     ),
                 ],
               ),
-              
+
               // Description
               Expanded(
                 child: Text(
                   template.description,
                   style: TextStyle(
                     fontSize: 11,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.7),
                   ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              
+
               const SizedBox(height: 4),
-              
+
               // Stats - Fixed at bottom
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Flexible(
-                    child: template.isOfficial 
-                      ? Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.favorite,
-                              size: 16,
-                              color: Colors.red.withValues(alpha: 0.7),
-                            ),
-                            const SizedBox(width: 2),
-                            Text(
-                              '${template.likes}',
-                              style: TextStyle(
-                                fontSize: 10,
-                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                              ),
-                            ),
-                          ],
-                        )
-                      : GestureDetector(
-                          onTap: onLike,
-                          child: Row(
+                    child: template.isOfficial
+                        ? Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Icon(
-                                template.isLiked ? Icons.favorite : Icons.favorite_border,
+                                Icons.favorite,
                                 size: 16,
-                                color: template.isLiked 
-                                  ? Colors.red 
-                                  : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                                color: Colors.red.withValues(alpha: 0.7),
                               ),
                               const SizedBox(width: 2),
                               Text(
-                                '${template.likes + (template.isLiked ? 1 : 0)}',
+                                '${template.likes}',
                                 style: TextStyle(
                                   fontSize: 10,
-                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                                  color: Theme.of(context).colorScheme.onSurface
+                                      .withValues(alpha: 0.6),
                                 ),
                               ),
                             ],
+                          )
+                        : GestureDetector(
+                            onTap: onLike,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  template.isLiked
+                                      ? Icons.favorite
+                                      : Icons.favorite_border,
+                                  size: 16,
+                                  color: template.isLiked
+                                      ? Colors.red
+                                      : Theme.of(context).colorScheme.onSurface
+                                            .withValues(alpha: 0.7),
+                                ),
+                                const SizedBox(width: 2),
+                                Text(
+                                  '${template.likes + (template.isLiked ? 1 : 0)}',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurface
+                                        .withValues(alpha: 0.6),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
                   ),
                   Flexible(
                     child: Text(
                       template.author,
                       style: TextStyle(
                         fontSize: 9,
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withValues(alpha: 0.5),
                         fontStyle: FontStyle.italic,
                       ),
                       maxLines: 1,
@@ -3264,10 +3637,11 @@ class _TemplateCard extends StatelessWidget {
       ),
     );
   }
-  
+
   void _showTemplatePreview(BuildContext context) {
     showDialog(
       context: context,
+      barrierColor: Colors.black54,
       builder: (context) => AlertDialog(
         title: Text(template.name),
         content: Column(
@@ -3283,7 +3657,9 @@ class _TemplateCard extends StatelessWidget {
             Text(
               'This template contains ${template.timeSlots.length} time slot(s) that you can import and customize.',
               style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.7),
               ),
             ),
           ],
@@ -3297,6 +3673,265 @@ class _TemplateCard extends StatelessWidget {
             onPressed: () {
               Navigator.of(context).pop(); // Close preview
               onImport(); // Import template
+            },
+            child: const Text('Import Template'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// Firebase Template Card
+class _FirebaseTemplateCard extends StatelessWidget {
+  final Template template;
+  final VoidCallback onImport;
+  final VoidCallback onLike;
+
+  const _FirebaseTemplateCard({
+    required this.template,
+    required this.onImport,
+    required this.onLike,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      child: InkWell(
+        onTap: () => _showTemplatePreview(context),
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          padding: const EdgeInsets.all(8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Title with optional verified badge
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Text(
+                      template.title,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  if (template.isOfficial) ...[
+                    const SizedBox(width: 4),
+                    Icon(Icons.verified, size: 16, color: Colors.amber),
+                  ],
+                ],
+              ),
+              const SizedBox(height: 6),
+
+              // Category and lifestyle badges - using SingleChildScrollView to prevent overflow
+              SizedBox(
+                height: 20,
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.primaryContainer,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          template.category,
+                          style: TextStyle(
+                            fontSize: 9,
+                            fontWeight: FontWeight.w500,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onPrimaryContainer,
+                          ),
+                        ),
+                      ),
+                      if (template.lifestyle != 'Balanced') ...[
+                        const SizedBox(width: 4),
+                        Container(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.secondaryContainer,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            template.lifestyle,
+                            style: TextStyle(
+                              fontSize: 9,
+                              fontWeight: FontWeight.w500,
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSecondaryContainer,
+                            ),
+                          ),
+                        ),
+                      ],
+                      if (template.isOfficial) ...[
+                        const SizedBox(width: 4),
+                        Container(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.amber.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            'Official',
+                            style: TextStyle(
+                              fontSize: 9,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.amber.shade700,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 6),
+
+              // Description - constrained to prevent overflow
+              Expanded(
+                child: Text(
+                  template.description,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.7),
+                    height: 1.2,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(height: 6),
+
+              // Bottom row with like button and author
+              Row(
+                children: [
+                  GestureDetector(
+                    onTap: onLike,
+                    child: Container(
+                      padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.errorContainer.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.favorite_border,
+                            size: 14,
+                            color: Theme.of(context).colorScheme.error,
+                          ),
+                          const SizedBox(width: 2),
+                          Text(
+                            '${template.likes}',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w500,
+                              color: Theme.of(context).colorScheme.error,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      'by ${template.authorName}',
+                      style: TextStyle(
+                        fontSize: 9,
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withValues(alpha: 0.6),
+                        fontStyle: FontStyle.italic,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.end,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showTemplatePreview(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierColor: Colors.black54,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Expanded(child: Text(template.title)),
+            if (template.isOfficial)
+              Icon(Icons.verified, color: Colors.amber, size: 20),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Category: ${template.category}'),
+            const SizedBox(height: 8),
+            Text('Lifestyle: ${template.lifestyle}'),
+            const SizedBox(height: 8),
+            Text('Description: ${template.description}'),
+            const SizedBox(height: 8),
+            Text('By: ${template.authorName}'),
+            const SizedBox(height: 8),
+            Text('❤️ ${template.likes} likes'),
+            const SizedBox(height: 16),
+            Text(
+              'This template contains ${template.timeSlots.length} time slot(s) that you can import and customize.',
+              style: TextStyle(
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.7),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              onImport();
             },
             child: const Text('Import Template'),
           ),
@@ -3564,6 +4199,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
   void _showLanguageSelector(AppLocalizations l10n) {
     showDialog(
       context: context,
+      barrierColor: Colors.black54,
       builder: (context) => AlertDialog(
         title: Text(l10n.selectLanguage),
         content: SizedBox(
@@ -3616,6 +4252,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
   void _showTutorial() {
     showDialog(
       context: context,
+      barrierColor: Colors.black54,
       barrierDismissible: true,
       builder: (BuildContext context) {
         return const TutorialDialog();
