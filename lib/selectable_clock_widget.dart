@@ -392,10 +392,8 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
               // Time slots section - 25% of screen height
               SizedBox(
                 height: 170,
-                child: Expanded(
-                  flex: 5,
-                  child: Column(
-                    children: [
+                child: Column(
+                  children: [
                       // Header row with title and add button
                       Padding(
                         padding: EdgeInsets.symmetric(
@@ -549,10 +547,10 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
                                 ),
                               ),
                       ),
-                    ],
-                  ),
+                  ],
                 ),
               ),
+
               SizedBox(height: 20),
               // PRO banner section - 15% of screen height
               SizedBox(
@@ -1775,6 +1773,7 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
   Widget _buildTimeSlotCard(TimeSlot slot, double screenWidth) {
     return Container(
       width: (screenWidth * 0.32).clamp(110.0, 140.0),
+      height: (screenWidth * 0.25).clamp(85.0, 110.0),
       margin: EdgeInsets.only(right: (screenWidth * 0.02).clamp(5.0, 10.0)),
       child: Card(
         color: Theme.of(context).colorScheme.surface,
@@ -1788,6 +1787,7 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
           child: Padding(
             padding: EdgeInsets.all((screenWidth * 0.015).clamp(4.0, 8.0)),
             child: Column(
+              mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(

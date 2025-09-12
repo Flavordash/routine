@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/routine_slot_model.dart';
+import '../utils/logger.dart';
 
 class RoutineSlotService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -35,7 +36,7 @@ class RoutineSlotService {
           .map((item) => RoutineSlot.fromJson(item as Map<String, dynamic>))
           .toList();
     } catch (error) {
-      print('Error loading routine slots: $error');
+      Logger.instance.error('Error loading routine slots: $error');
       return _getDefaultSlots();
     }
   }
@@ -44,7 +45,7 @@ class RoutineSlotService {
   Future<void> saveRoutineSlots(List<RoutineSlot> slots) async {
     try {
       if (currentUser == null) {
-        print('No user logged in, cannot save slots');
+        Logger.instance.warning('No user logged in, cannot save slots');
         return;
       }
 
@@ -55,9 +56,9 @@ class RoutineSlotService {
         'lastModified': FieldValue.serverTimestamp(),
       });
 
-      print('Routine slots saved successfully');
+      Logger.instance.info('Routine slots saved successfully');
     } catch (error) {
-      print('Error saving routine slots: $error');
+      Logger.instance.error('Error saving routine slots: $error');
     }
   }
 

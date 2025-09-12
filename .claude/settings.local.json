@@ -25,7 +25,10 @@
       "Read(/Users/dashpill/Library/Android/sdk/**)",
       "Read(/Users/dashpill/.android/avd/**)",
       "Bash(pod cache clean:*)",
-      "Bash(dart run intl_utils:generate:*)"
+      "Bash(dart run intl_utils:generate:*)",
+      "Bash(sed:*)",
+      "Bash(awk:*)",
+      "Bash(pkill:*)"
     ],
     "deny": [],
     "ask": []

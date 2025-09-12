@@ -12,6 +12,7 @@ class Template {
   final String authorName;
   final List<Map<String, dynamic>> timeSlots;
   final int likes;
+  final int usageCount; // Number of times this template has been used/imported
   final bool isOfficial;
   final DateTime createdAt;
 
@@ -25,6 +26,7 @@ class Template {
     required this.authorName,
     required this.timeSlots,
     required this.likes,
+    this.usageCount = 0,
     required this.isOfficial,
     required this.createdAt,
   });
@@ -40,6 +42,7 @@ class Template {
       'authorName': authorName,
       'timeSlots': timeSlots,
       'likes': likes,
+      'usageCount': usageCount,
       'isOfficial': isOfficial,
       'createdAt': createdAt.toIso8601String(),
     };
@@ -56,6 +59,7 @@ class Template {
       authorName: map['authorName'] ?? '',
       timeSlots: List<Map<String, dynamic>>.from(map['timeSlots'] ?? []),
       likes: map['likes'] ?? 0,
+      usageCount: map['usageCount'] ?? 0,
       isOfficial: map['isOfficial'] ?? false,
       createdAt: DateTime.parse(map['createdAt'] ?? DateTime.now().toIso8601String()),
     );
@@ -180,6 +184,19 @@ class TemplateService {
       return true;
     } catch (e) {
       print('Error liking template: $e');
+      return false;
+    }
+  }
+
+  // Unlike a template
+  static Future<bool> unlikeTemplate(String templateId) async {
+    try {
+      await _templatesCollection.doc(templateId).update({
+        'likes': FieldValue.increment(-1),
+      });
+      return true;
+    } catch (e) {
+      print('Error unliking template: $e');
       return false;
     }
   }
