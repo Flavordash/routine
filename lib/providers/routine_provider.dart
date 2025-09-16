@@ -97,6 +97,30 @@ class RoutineSlotsNotifier extends StateNotifier<AsyncValue<List<RoutineSlot>>> 
       state = AsyncValue.error(error, stackTrace);
     }
   }
+
+  // Import template as new routine slot using safer method
+  Future<void> importTemplate({
+    required String templateName,
+    required List<Map<String, dynamic>> templateTimeSlots,
+    required bool isPaid,
+    bool setAsActive = true,
+  }) async {
+    final currentSlots = state.value ?? [];
+    
+    try {
+      final updatedSlots = await _routineSlotService.importTemplateAsNewSlot(
+        currentSlots: currentSlots,
+        templateName: templateName,
+        templateTimeSlots: templateTimeSlots,
+        isPaid: isPaid,
+        setAsActive: setAsActive,
+      );
+      
+      state = AsyncValue.data(updatedSlots);
+    } catch (error, stackTrace) {
+      state = AsyncValue.error(error, stackTrace);
+    }
+  }
 }
 
 // Provider for routine slots state management

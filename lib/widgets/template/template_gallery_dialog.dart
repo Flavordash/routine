@@ -16,7 +16,7 @@ class TemplateGalleryDialog extends StatefulWidget {
 
 class _TemplateGalleryDialogState extends State<TemplateGalleryDialog> {
   String selectedCategory = 'All';
-  String selectedLifestyle = 'All';
+  String selectedSortBy = 'Newest';
   String searchQuery = '';
   bool isLoading = true;
   List<Template> templates = [];
@@ -25,7 +25,7 @@ class _TemplateGalleryDialogState extends State<TemplateGalleryDialog> {
   final Set<String> likedTemplates = <String>{}; // Track liked template IDs
 
   final categories = ['All', ...TemplateService.categories];
-  final lifestyles = ['All', ...TemplateService.lifestyleTypes];
+  final sortOptions = ['Newest', 'Most Liked', 'Most Used', 'Popular'];
 
   @override
   void initState() {
@@ -86,10 +86,6 @@ class _TemplateGalleryDialogState extends State<TemplateGalleryDialog> {
       final categoryMatch =
           selectedCategory == 'All' || template.category == selectedCategory;
 
-      // Lifestyle filter
-      final lifestyleMatch =
-          selectedLifestyle == 'All' || template.lifestyle == selectedLifestyle;
-
       // Search filter
       final searchMatch =
           searchQuery.isEmpty ||
@@ -99,8 +95,34 @@ class _TemplateGalleryDialogState extends State<TemplateGalleryDialog> {
           ) ||
           template.authorName.toLowerCase().contains(searchQuery.toLowerCase());
 
-      return categoryMatch && lifestyleMatch && searchMatch;
+      return categoryMatch && searchMatch;
     }).toList();
+
+    // Apply sorting
+    _sortTemplates();
+  }
+
+  void _sortTemplates() {
+    switch (selectedSortBy) {
+      case 'Most Liked':
+        filteredTemplates.sort((a, b) => b.likes.compareTo(a.likes));
+        break;
+      case 'Most Used':
+        filteredTemplates.sort((a, b) => b.usageCount.compareTo(a.usageCount));
+        break;
+      case 'Popular':
+        // Sort by combination of likes and usage count
+        filteredTemplates.sort((a, b) {
+          final scoreA = a.likes + (a.usageCount * 0.5);
+          final scoreB = b.likes + (b.usageCount * 0.5);
+          return scoreB.compareTo(scoreA);
+        });
+        break;
+      case 'Newest':
+      default:
+        filteredTemplates.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        break;
+    }
   }
 
   @override
@@ -219,25 +241,25 @@ class _TemplateGalleryDialogState extends State<TemplateGalleryDialog> {
                     ),
                     child: DropdownButtonHideUnderline(
                       child: DropdownButton<String>(
-                        value: selectedLifestyle,
-                        hint: const Text('Lifestyle'),
+                        value: selectedSortBy,
+                        hint: const Text('Sort by'),
                         isExpanded: true,
                         style: TextStyle(
                           color: Theme.of(context).colorScheme.onSurface,
                           fontSize: 14,
                         ),
-                        items: lifestyles.map((lifestyle) {
+                        items: sortOptions.map((option) {
                           return DropdownMenuItem(
-                            value: lifestyle,
+                            value: option,
                             child: Text(
-                              lifestyle,
+                              option,
                               style: const TextStyle(fontSize: 12),
                             ),
                           );
                         }).toList(),
                         onChanged: (value) {
                           setState(() {
-                            selectedLifestyle = value!;
+                            selectedSortBy = value!;
                             _filterTemplates();
                           });
                         },
@@ -281,13 +303,13 @@ class _TemplateGalleryDialogState extends State<TemplateGalleryDialog> {
             Text('No templates found'),
             if (searchQuery.isNotEmpty ||
                 selectedCategory != 'All' ||
-                selectedLifestyle != 'All')
+                selectedSortBy != 'Newest')
               TextButton(
                 onPressed: () {
                   setState(() {
                     _searchController.clear();
                     selectedCategory = 'All';
-                    selectedLifestyle = 'All';
+                    selectedSortBy = 'Newest';
                     searchQuery = '';
                     _filterTemplates();
                   });
@@ -409,77 +431,303 @@ class _TemplateGalleryDialogState extends State<TemplateGalleryDialog> {
       RoutineTemplate(
         id: '1',
         name: 'Student Life',
-        category: 'Student',
-        description: 'Perfect schedule for students',
+        category: 'Education',
+        description: 'Perfect balanced schedule for students with classes, study time, and personal care',
         author: 'Routine 24',
         likes: 245,
         isOfficial: true,
         timeSlots: [
           {
-            'startTime': '07:00',
-            'endTime': '08:00',
-            'label': 'Morning Routine',
+            'startTime': '06:30',
+            'endTime': '07:30',
+            'label': 'Wake up & Morning routine',
             'description': 'Get ready for the day',
             'color': 0xFF2196F3,
-            'startAngle': 105.0,
-            'endAngle': 120.0,
+            'startAngle': 97.5,
+            'endAngle': 112.5,
+          },
+          {
+            'startTime': '07:30',
+            'endTime': '08:30',
+            'label': 'Breakfast & Preparation',
+            'description': 'Healthy breakfast and prepare for classes',
+            'color': 0xFFFF9800,
+            'startAngle': 112.5,
+            'endAngle': 127.5,
           },
           {
             'startTime': '09:00',
             'endTime': '12:00',
-            'label': 'Study Session',
-            'description': 'Focused learning time',
+            'label': 'Morning Classes',
+            'description': 'Attend lectures and seminars',
             'color': 0xFF4CAF50,
             'startAngle': 135.0,
             'endAngle': 180.0,
+          },
+          {
+            'startTime': '12:00',
+            'endTime': '13:00',
+            'label': 'Lunch break',
+            'description': 'Rest and refuel',
+            'color': 0xFFE91E63,
+            'startAngle': 180.0,
+            'endAngle': 195.0,
+          },
+          {
+            'startTime': '13:00',
+            'endTime': '16:00',
+            'label': 'Afternoon Classes',
+            'description': 'Continue with academic activities',
+            'color': 0xFF9C27B0,
+            'startAngle': 195.0,
+            'endAngle': 240.0,
+          },
+          {
+            'startTime': '16:00',
+            'endTime': '18:00',
+            'label': 'Study/Homework',
+            'description': 'Review and complete assignments',
+            'color': 0xFF607D8B,
+            'startAngle': 240.0,
+            'endAngle': 270.0,
+          },
+          {
+            'startTime': '18:00',
+            'endTime': '19:00',
+            'label': 'Dinner',
+            'description': 'Evening meal',
+            'color': 0xFFFF5722,
+            'startAngle': 270.0,
+            'endAngle': 285.0,
+          },
+          {
+            'startTime': '19:00',
+            'endTime': '20:30',
+            'label': 'Exercise/Sports',
+            'description': 'Physical activity and fitness',
+            'color': 0xFFF44336,
+            'startAngle': 285.0,
+            'endAngle': 307.5,
+          },
+          {
+            'startTime': '20:30',
+            'endTime': '22:00',
+            'label': 'Free time/Social',
+            'description': 'Relax and socialize',
+            'color': 0xFF795548,
+            'startAngle': 307.5,
+            'endAngle': 330.0,
+          },
+          {
+            'startTime': '22:00',
+            'endTime': '23:00',
+            'label': 'Evening routine',
+            'description': 'Wind down and prepare for sleep',
+            'color': 0xFF3F51B5,
+            'startAngle': 330.0,
+            'endAngle': 345.0,
+          },
+          {
+            'startTime': '23:00',
+            'endTime': '06:30',
+            'label': 'Sleep',
+            'description': 'Rest and recovery',
+            'color': 0xFF424242,
+            'startAngle': 345.0,
+            'endAngle': 97.5,
           },
         ],
       ),
       RoutineTemplate(
         id: '2',
         name: 'Office Worker',
-        category: 'Office Worker',
-        description: 'Standard office schedule',
+        category: 'Work & Career',
+        description: 'Standard 9-to-5 office schedule with healthy work-life balance',
         author: 'Routine 24',
         likes: 189,
         isOfficial: true,
         timeSlots: [
           {
-            'startTime': '09:00',
-            'endTime': '17:00',
-            'label': 'Work Hours',
-            'description': 'Professional work time',
+            'startTime': '06:00',
+            'endTime': '07:00',
+            'label': 'Wake up & Morning routine',
+            'description': 'Start the day refreshed',
+            'color': 0xFF2196F3,
+            'startAngle': 90.0,
+            'endAngle': 105.0,
+          },
+          {
+            'startTime': '07:00',
+            'endTime': '08:00',
+            'label': 'Breakfast & Commute prep',
+            'description': 'Fuel up and get ready to leave',
             'color': 0xFFFF9800,
+            'startAngle': 105.0,
+            'endAngle': 120.0,
+          },
+          {
+            'startTime': '08:00',
+            'endTime': '09:00',
+            'label': 'Commute to work',
+            'description': 'Travel to office',
+            'color': 0xFF9E9E9E,
+            'startAngle': 120.0,
+            'endAngle': 135.0,
+          },
+          {
+            'startTime': '09:00',
+            'endTime': '12:00',
+            'label': 'Morning work',
+            'description': 'Most productive hours',
+            'color': 0xFF4CAF50,
             'startAngle': 135.0,
+            'endAngle': 180.0,
+          },
+          {
+            'startTime': '12:00',
+            'endTime': '13:00',
+            'label': 'Lunch break',
+            'description': 'Rest and recharge',
+            'color': 0xFFE91E63,
+            'startAngle': 180.0,
+            'endAngle': 195.0,
+          },
+          {
+            'startTime': '13:00',
+            'endTime': '17:00',
+            'label': 'Afternoon work',
+            'description': 'Complete daily tasks',
+            'color': 0xFF9C27B0,
+            'startAngle': 195.0,
             'endAngle': 255.0,
+          },
+          {
+            'startTime': '17:00',
+            'endTime': '18:00',
+            'label': 'Commute home',
+            'description': 'Travel back home',
+            'color': 0xFF607D8B,
+            'startAngle': 255.0,
+            'endAngle': 270.0,
+          },
+          {
+            'startTime': '18:00',
+            'endTime': '19:00',
+            'label': 'Dinner',
+            'description': 'Evening meal with family',
+            'color': 0xFFFF5722,
+            'startAngle': 270.0,
+            'endAngle': 285.0,
+          },
+          {
+            'startTime': '19:00',
+            'endTime': '21:00',
+            'label': 'Personal time/Exercise',
+            'description': 'Hobbies, fitness, or relaxation',
+            'color': 0xFFF44336,
+            'startAngle': 285.0,
+            'endAngle': 315.0,
+          },
+          {
+            'startTime': '21:00',
+            'endTime': '22:00',
+            'label': 'Family time/Relaxation',
+            'description': 'Quality time with loved ones',
+            'color': 0xFF795548,
+            'startAngle': 315.0,
+            'endAngle': 330.0,
+          },
+          {
+            'startTime': '22:00',
+            'endTime': '06:00',
+            'label': 'Sleep',
+            'description': 'Rest and recovery',
+            'color': 0xFF424242,
+            'startAngle': 330.0,
+            'endAngle': 90.0,
           },
         ],
       ),
       RoutineTemplate(
         id: '3',
-        name: 'Fitness Focus',
-        category: 'Fitness',
-        description: 'Health and fitness routine',
-        author: 'FitLife',
+        name: 'Night Shift Nurse',
+        category: 'Health & Fitness',
+        description: 'Optimized schedule for healthcare workers on night shifts',
+        author: 'Routine 24',
         likes: 324,
+        isOfficial: true,
         timeSlots: [
-          {
-            'startTime': '06:00',
-            'endTime': '07:00',
-            'label': 'Morning Workout',
-            'description': 'Start the day strong',
-            'color': 0xFFF44336,
-            'startAngle': 90.0,
-            'endAngle': 105.0,
-          },
           {
             'startTime': '18:00',
             'endTime': '19:00',
-            'label': 'Evening Exercise',
-            'description': 'End of day fitness',
-            'color': 0xFF9C27B0,
+            'label': 'Wake up & Evening routine',
+            'description': 'Prepare for the night shift',
+            'color': 0xFF2196F3,
             'startAngle': 270.0,
             'endAngle': 285.0,
+          },
+          {
+            'startTime': '19:00',
+            'endTime': '20:00',
+            'label': 'Dinner',
+            'description': 'Nutritious meal before work',
+            'color': 0xFFFF9800,
+            'startAngle': 285.0,
+            'endAngle': 300.0,
+          },
+          {
+            'startTime': '20:00',
+            'endTime': '21:00',
+            'label': 'Commute to work',
+            'description': 'Travel to hospital/clinic',
+            'color': 0xFF9E9E9E,
+            'startAngle': 300.0,
+            'endAngle': 315.0,
+          },
+          {
+            'startTime': '21:00',
+            'endTime': '07:00',
+            'label': 'Night shift work',
+            'description': 'Caring for patients during night hours',
+            'color': 0xFF4CAF50,
+            'startAngle': 315.0,
+            'endAngle': 105.0,
+          },
+          {
+            'startTime': '07:00',
+            'endTime': '08:00',
+            'label': 'Commute home',
+            'description': 'Travel back home',
+            'color': 0xFF607D8B,
+            'startAngle': 105.0,
+            'endAngle': 120.0,
+          },
+          {
+            'startTime': '08:00',
+            'endTime': '09:00',
+            'label': 'Breakfast/Wind down',
+            'description': 'Decompress from work',
+            'color': 0xFFE91E63,
+            'startAngle': 120.0,
+            'endAngle': 135.0,
+          },
+          {
+            'startTime': '09:00',
+            'endTime': '16:00',
+            'label': 'Sleep',
+            'description': 'Daytime rest and recovery',
+            'color': 0xFF424242,
+            'startAngle': 135.0,
+            'endAngle': 240.0,
+          },
+          {
+            'startTime': '16:00',
+            'endTime': '18:00',
+            'label': 'Personal time/Exercise/Errands',
+            'description': 'Take care of personal needs',
+            'color': 0xFFF44336,
+            'startAngle': 240.0,
+            'endAngle': 270.0,
           },
         ],
       ),

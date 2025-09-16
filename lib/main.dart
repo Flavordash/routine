@@ -21,6 +21,8 @@ import 'widgets/dialogs/hamburger_menu_dialog.dart';
 import 'widgets/common/error_boundary.dart';
 import 'utils/error_handler.dart';
 import 'utils/lazy_loader.dart';
+import 'services/notification_service.dart';
+import 'widgets/splash/image_splash_screen.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 
@@ -54,9 +56,10 @@ void main() async {
 
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-  // Initialize monetization services
+  // Initialize services
   await AdService.instance.initialize();
   await SubscriptionService.instance.initialize();
+  await NotificationService.instance.initialize();
 
   runApp(
     const ProviderScope(
@@ -75,6 +78,7 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> {
   bool isDarkMode = true;
   bool isInitializing = true;
+  bool showSplashScreen = true;
   final LanguageService languageService = LanguageService();
 
   @override
@@ -150,18 +154,28 @@ class _MyAppState extends State<MyApp> {
           GlobalCupertinoLocalizations.delegate,
         ],
         supportedLocales: languageService.supportedLocales,
-        home: ErrorBoundary(
-          errorMessage: 'Unable to load the main screen',
-          onRetry: () {
-            setState(() {});
-          },
-          child: MyHomePage(
-            title: '24-Hour Clock Selector',
-            isDarkMode: isDarkMode,
-            onThemeToggle: toggleTheme,
-            languageService: languageService,
-          ),
-        ),
+        home: showSplashScreen
+            ? ImageSplashScreen(
+                onSplashComplete: () {
+                  setState(() {
+                    showSplashScreen = false;
+                  });
+                },
+                splashDuration: const Duration(milliseconds: 1500),
+                backgroundColor: Colors.white,
+              )
+            : ErrorBoundary(
+                errorMessage: 'Unable to load the main screen',
+                onRetry: () {
+                  setState(() {});
+                },
+                child: MyHomePage(
+                  title: '24-Hour Clock Selector',
+                  isDarkMode: isDarkMode,
+                  onThemeToggle: toggleTheme,
+                  languageService: languageService,
+                ),
+              ),
       ),
     );
   }
@@ -368,6 +382,9 @@ class _MyHomePageState extends State<MyHomePage>
         routineSlots = result;
         activeSlot = _routineSlotService.getActiveSlot(result);
       });
+      
+      // Schedule notifications for the active routine on app start
+      _scheduleNotificationsForActiveRoutine();
     }
   }
 
@@ -394,6 +411,43 @@ class _MyHomePageState extends State<MyHomePage>
         activeSlot = _routineSlotService.getActiveSlot(routineSlots);
       });
       _saveRoutineSlots();
+      
+      // Schedule notifications for the active routine only
+      _scheduleNotificationsForActiveRoutine();
+    }
+  }
+
+  // Schedule notifications for active routine only
+  Future<void> _scheduleNotificationsForActiveRoutine() async {
+    await NotificationService.instance.scheduleActiveRoutineNotifications(routineSlots);
+  }
+
+  // Debug method to run notification system verification
+  Future<void> _runNotificationTests() async {
+    print('🔧 DEBUG: Running notification system verification...');
+    
+    // Verify day-of-week calculations
+    final dayCalculationCorrect = NotificationService.instance.verifyDayOfWeekCalculation();
+    print('✅ Day-of-week calculations: ${dayCalculationCorrect ? 'PASSED' : 'FAILED'}');
+    
+    // Run all test scenarios
+    final testResults = await NotificationService.instance.runAllTests();
+    
+    print('📊 Test Results Summary:');
+    for (final result in testResults) {
+      print('${result.passed ? '✅' : '❌'} ${result.scenario}: ${result.details}');
+    }
+    
+    final passedCount = testResults.where((r) => r.passed).length;
+    print('🎯 Overall: $passedCount/${testResults.length} tests passed');
+    
+    // Test current routine state
+    print('📱 Current App State:');
+    print('  - Total routines: ${routineSlots.length}');
+    print('  - Active routine: ${activeSlot?.name ?? 'None'}');
+    if (activeSlot != null) {
+      print('  - Selected days: ${activeSlot!.selectedDays}');
+      print('  - Time slots with alarms: ${activeSlot!.timeSlots.where((ts) => ts.hasAlarm).length}');
     }
   }
 
@@ -523,6 +577,9 @@ class _MyHomePageState extends State<MyHomePage>
             activeSlot = active;
           });
           _saveRoutineSlots();
+          
+          // Reschedule notifications when routine slots change
+          _scheduleNotificationsForActiveRoutine();
         },
         isProUser: isProUser,
       ),
@@ -584,6 +641,19 @@ class _MyHomePageState extends State<MyHomePage>
             },
           ),
         ),
+        title: activeSlot != null
+            ? Text(
+                activeSlot!.name,
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              )
+            : null,
+        centerTitle: true,
         actions: [
           Container(
             margin: const EdgeInsets.only(right: 19.0),
@@ -639,57 +709,34 @@ class _MyHomePageState extends State<MyHomePage>
   void _importTemplate(
     String templateName,
     List<Map<String, dynamic>> templateTimeSlots,
-  ) {
+  ) async {
     try {
-      // First, deactivate all existing routine slots
-      final updatedSlots = routineSlots.map((slot) => 
-        slot.copyWith(isActive: false)
-      ).toList();
-
-      // Create new routine slot with template name and time slots - ACTIVE
-      final newSlot = RoutineSlot(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        name: templateName,
-        timeSlots: templateTimeSlots
-            .map(
-              (slot) => RoutineTimeSlot(
-                id: DateTime.now().millisecondsSinceEpoch.toString(),
-                label: slot['label'],
-                description: slot['description'],
-                startTime: slot['startTime'],
-                endTime: slot['endTime'],
-                color: slot['color'],
-                hasAlarm: false,
-                snoozeDuration: 10,
-                maxSnoozeCount: 3,
-                snoozeEnabled: true,
-                hasPreAlarm: false,
-                preAlarmMinutes: 15,
-                startAngle: slot['startAngle'],
-                endAngle: slot['endAngle'],
-                createdAt: DateTime.now(),
-              ),
-            )
-            .toList(),
-        selectedDays: [1, 2, 3, 4, 5, 6, 7], // All days by default
-        createdAt: DateTime.now(),
-        isActive: true, // Make it ACTIVE so it shows on main page
+      // Use the safer import method from the service
+      final updatedSlots = await _routineSlotService.importTemplateAsNewSlot(
+        currentSlots: routineSlots,
+        templateName: templateName,
+        templateTimeSlots: templateTimeSlots,
         isPaid: isProUser,
+        setAsActive: true,
       );
 
-      // Update state: add new slot and set it as active
+      // Update state with the new slots
       setState(() {
-        routineSlots = [...updatedSlots, newSlot];
-        activeSlot = newSlot; // Set the imported template as active
+        routineSlots = updatedSlots;
+        activeSlot = _routineSlotService.getActiveSlot(updatedSlots);
       });
 
-      // Save to storage with error handling
-      _saveRoutineSlots();
+      // Schedule notifications for the newly active routine
+      _scheduleNotificationsForActiveRoutine();
 
       // Show success message
-      ErrorHandler.showSuccessSnackBar(context, 'Template "$templateName" imported successfully!');
+      if (mounted) {
+        ErrorHandler.showSuccessSnackBar(context, 'Template "$templateName" imported successfully!');
+      }
     } catch (error) {
-      ErrorHandler.showErrorSnackBar(context, 'Failed to import template: ${ErrorHandler.handleGenericError(error)}');
+      if (mounted) {
+        ErrorHandler.showErrorSnackBar(context, 'Failed to import template: ${ErrorHandler.handleGenericError(error)}');
+      }
     }
   }
 

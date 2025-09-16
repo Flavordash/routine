@@ -420,16 +420,19 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog>
       return;
     }
 
-    final newSlot = RoutineSlot(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      name: 'Routine ${routineSlots.length + 1}',
-      isActive: false,
-      isPaid: !widget.isProUser ? false : true,
+    // Use the service method for automatic color allocation
+    final updatedSlots = widget.routineSlotService.addNewSlot(
+      routineSlots,
+      'Routine ${routineSlots.length + 1}',
+      widget.isProUser,
     );
 
     setState(() {
-      routineSlots.add(newSlot);
+      routineSlots = updatedSlots;
     });
+
+    // Save the updated slots
+    widget.onSlotsChanged(routineSlots, activeSlot);
   }
 
   void _activateSlot(RoutineSlot slot) {
@@ -468,16 +471,43 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog>
           ElevatedButton(
             onPressed: () {
               if (controller.text.trim().isNotEmpty) {
-                final index = routineSlots.indexOf(slot);
-                setState(() {
-                  routineSlots[index] = RoutineSlot(
-                    id: slot.id,
-                    name: controller.text.trim(),
-                    isActive: slot.isActive,
-                    isPaid: slot.isPaid,
+                // Find slot by ID instead of object reference to avoid -1 index
+                final index = routineSlots.indexWhere((s) => s.id == slot.id);
+                
+                if (index != -1) {
+                  setState(() {
+                    routineSlots[index] = slot.copyWith(
+                      name: controller.text.trim(),
+                    );
+                    
+                    // Update activeSlot reference if this is the active slot
+                    if (slot.isActive) {
+                      activeSlot = routineSlots[index];
+                    }
+                  });
+                  
+                  // Save changes
+                  widget.onSlotsChanged(routineSlots, activeSlot);
+                  
+                  Navigator.pop(context);
+                  
+                  // Show success message
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Routine renamed to "${controller.text.trim()}"'),
+                      backgroundColor: Colors.green,
+                    ),
                   );
-                });
-                Navigator.pop(context);
+                } else {
+                  // Handle error case
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Error: Could not find routine to rename'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                  Navigator.pop(context);
+                }
               }
             },
             child: const Text('Save'),
@@ -493,18 +523,29 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog>
       return;
     }
 
+    // Get automatic color allocation for the duplicated slot
+    final autoColor = widget.routineSlotService.getNextAvailableColor(routineSlots);
+
     final duplicatedSlot = RoutineSlot(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       name: '${slot.name} (Copy)',
       isActive: false,
       isPaid: slot.isPaid,
-      color: slot.color,
+      color: autoColor, // Use automatic color allocation instead of copying the same color
       selectedDays: List.from(slot.selectedDays),
+      timeSlots: slot.timeSlots.map((timeSlot) => timeSlot.copyWith(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+      )).toList(),
+      createdAt: DateTime.now(),
+      lastModified: DateTime.now(),
     );
 
     setState(() {
       routineSlots.add(duplicatedSlot);
     });
+
+    // Save the updated slots
+    widget.onSlotsChanged(routineSlots, activeSlot);
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -1886,66 +1927,62 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog>
   void _importTemplate(
     String templateName,
     List<Map<String, dynamic>> templateTimeSlots,
-  ) {
-    // Create new routine slot with template name and time slots
-    final newSlot = RoutineSlot(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      name: templateName,
-      isActive: false,
-      isPaid: true, // Templates are a PRO feature
-      timeSlots: templateTimeSlots.map((slotData) {
-        return RoutineTimeSlot(
-          id: DateTime.now().millisecondsSinceEpoch.toString(),
-          startAngle: slotData['startAngle'] ?? 0.0,
-          endAngle: slotData['endAngle'] ?? 0.0,
-          startTime: slotData['startTime'] ?? '09:00',
-          endTime: slotData['endTime'] ?? '10:00',
-          label: slotData['label'] ?? 'Activity',
-          description: slotData['description'] ?? '',
-          color: slotData['color'] ?? 0xFF2196F3,
-          createdAt: DateTime.now(),
+  ) async {
+    try {
+      // Use the RoutineSlotService for safer template import
+      final routineSlotService = RoutineSlotService();
+      
+      final updatedSlots = await routineSlotService.importTemplateAsNewSlot(
+        currentSlots: routineSlots,
+        templateName: templateName,
+        templateTimeSlots: templateTimeSlots,
+        isPaid: true, // Templates are a PRO feature
+        setAsActive: true,
+      );
+
+      // Update local state
+      setState(() {
+        routineSlots = updatedSlots;
+        activeSlot = routineSlotService.getActiveSlot(updatedSlots);
+      });
+
+      // Notify parent widget
+      widget.onSlotsChanged(routineSlots, activeSlot);
+
+      // Show success message
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Template "$templateName" imported and activated successfully!',
+            ),
+            duration: const Duration(seconds: 3),
+            backgroundColor: Colors.green,
+            action: SnackBarAction(
+              label: 'VIEW',
+              textColor: Colors.white,
+              onPressed: () {
+                // Scroll to show the newly activated routine in the hamburger menu
+                // The routine is already active, so it will be visible
+              },
+            ),
+          ),
         );
-      }).toList(),
-    );
-
-    setState(() {
-      // Deactivate current active slot
-      if (activeSlot != null) {
-        final inactiveSlotIndex = routineSlots.indexOf(activeSlot!);
-        if (inactiveSlotIndex != -1) {
-          routineSlots[inactiveSlotIndex] = activeSlot!.copyWith(
-            isActive: false,
-          );
-        }
       }
-
-      // Create new slot with active status
-      final activeNewSlot = newSlot.copyWith(isActive: true);
-      routineSlots.add(activeNewSlot);
-      activeSlot = activeNewSlot;
-    });
-
-    // Save the new routine slots
-    widget.onSlotsChanged(routineSlots, activeSlot);
-
-    // Show success message with info about auto-activation
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Template "$templateName" imported and activated successfully!',
-        ),
-        duration: const Duration(seconds: 3),
-        backgroundColor: Colors.green,
-        action: SnackBarAction(
-          label: 'VIEW',
-          textColor: Colors.white,
-          onPressed: () {
-            // Scroll to show the newly activated routine in the hamburger menu
-            // The routine is already active, so it will be visible
-          },
-        ),
-      ),
-    );
+    } catch (error) {
+      // Handle error
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Failed to import template: $error',
+            ),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
   }
 
   @override

@@ -74,7 +74,7 @@ class TemplateService {
   static final CollectionReference _templatesCollection = 
       _firestore.collection('templates');
 
-  // Upload a template to Firestore
+  // Upload a template to Firestore with validation
   static Future<bool> shareTemplate({
     required String title,
     required String description,
@@ -86,6 +86,38 @@ class TemplateService {
       final user = _auth.currentUser;
       if (user == null) {
         throw Exception('User not authenticated');
+      }
+
+      // Validate input
+      if (title.trim().isEmpty) {
+        throw Exception('Template title cannot be empty');
+      }
+      
+      if (description.trim().isEmpty) {
+        throw Exception('Template description cannot be empty');
+      }
+      
+      if (!categories.contains(category)) {
+        throw Exception('Invalid category: $category');
+      }
+      
+      if (!lifestyleTypes.contains(lifestyle)) {
+        throw Exception('Invalid lifestyle type: $lifestyle');
+      }
+      
+      if (timeSlots.isEmpty) {
+        throw Exception('Template must have at least one time slot');
+      }
+
+      // Validate time slots
+      for (int i = 0; i < timeSlots.length; i++) {
+        final slot = timeSlots[i];
+        if (slot['startTime'] == null || slot['endTime'] == null) {
+          throw Exception('Time slot ${i + 1} is missing start or end time');
+        }
+        if (slot['label'] == null || slot['label'].toString().trim().isEmpty) {
+          throw Exception('Time slot ${i + 1} must have a label');
+        }
       }
 
       // Generate unique ID

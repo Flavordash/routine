@@ -1,8 +1,5 @@
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
-import 'dart:typed_data';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:timezone/timezone.dart' as tz;
 import 'package:rive/rive.dart' as rive;
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:vibration/vibration.dart';
@@ -101,10 +98,7 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
   // Purchase service
   late PurchaseService _purchaseService;
 
-  // Notification settings
-  FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
-      FlutterLocalNotificationsPlugin();
-  bool globalNotificationsEnabled = true;
+  // Note: Notification management is now handled by NotificationService in main app
 
   // Removed hover functionality as it doesn't work on mobile
 
@@ -143,7 +137,6 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
       vsync: this,
     );
 
-    _initializeNotifications();
     _initializePurchaseService();
   }
 
@@ -176,32 +169,7 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
     );
   }
 
-  Future<void> _initializeNotifications() async {
-    const AndroidInitializationSettings initializationSettingsAndroid =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
-
-    const DarwinInitializationSettings initializationSettingsIOS =
-        DarwinInitializationSettings(
-          requestAlertPermission: true,
-          requestBadgePermission: true,
-          requestSoundPermission: true,
-        );
-
-    const InitializationSettings initializationSettings =
-        InitializationSettings(
-          android: initializationSettingsAndroid,
-          iOS: initializationSettingsIOS,
-        );
-
-    await flutterLocalNotificationsPlugin.initialize(initializationSettings);
-
-    // Request permissions explicitly for iOS
-    await flutterLocalNotificationsPlugin
-        .resolvePlatformSpecificImplementation<
-          IOSFlutterLocalNotificationsPlugin
-        >()
-        ?.requestPermissions(alert: true, badge: true, sound: true);
-  }
+  // Note: Notification initialization is now handled by NotificationService in main app
 
   // Test vibration method
   Future<void> _testVibration() async {
@@ -212,89 +180,8 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
     }
   }
 
-  Future<void> _scheduleNotification(
-    TimeSlot slot, {
-    List<int>? selectedDays,
-  }) async {
-    if (!globalNotificationsEnabled || !slot.notificationEnabled) return;
-
-    // Default to all days if not specified
-    final days = selectedDays ?? [1, 2, 3, 4, 5, 6, 7];
-
-    // Schedule notification for each selected day of the week
-    for (int dayOfWeek in days) {
-      final now = DateTime.now();
-      final currentDayOfWeek = now.weekday; // 1 = Monday, 7 = Sunday
-
-      // Calculate days until the target day
-      int daysUntilTarget = (dayOfWeek - currentDayOfWeek) % 7;
-      if (daysUntilTarget == 0) {
-        // It's today - check if time has passed
-        final todayScheduledTime = DateTime(
-          now.year,
-          now.month,
-          now.day,
-          slot.startHour,
-          slot.startMinute,
-        );
-
-        if (todayScheduledTime.isBefore(now)) {
-          daysUntilTarget = 7; // Schedule for next week
-        }
-      }
-
-      final notificationTime = DateTime(
-        now.year,
-        now.month,
-        now.day + daysUntilTarget,
-        slot.startHour,
-        slot.startMinute,
-      );
-
-      final androidDetails = AndroidNotificationDetails(
-        'routine_notifications',
-        'Routine Notifications',
-        channelDescription: 'Notifications for your scheduled time slots',
-        importance: Importance.max,
-        priority: Priority.high,
-        enableVibration: true,
-        vibrationPattern: Int64List.fromList([
-          0,
-          1000,
-          500,
-          1000,
-        ]), // Vibration pattern
-        playSound: true,
-      );
-
-      const iosDetails = DarwinNotificationDetails(
-        presentAlert: true,
-        presentBadge: true,
-        presentSound: true,
-      );
-
-      final platformChannelSpecifics = NotificationDetails(
-        android: androidDetails,
-        iOS: iosDetails,
-      );
-
-      await flutterLocalNotificationsPlugin.zonedSchedule(
-        slot.id.hashCode + dayOfWeek, // Unique ID for each day
-        'Time for: ${slot.title}',
-        '${_formatTimeWithMinutes(slot.startHour, slot.startMinute)} - ${_formatTimeWithMinutes(slot.endHour, slot.endMinute)}',
-        tz.TZDateTime.from(notificationTime, tz.local),
-        platformChannelSpecifics,
-        matchDateTimeComponents:
-            DateTimeComponents.dayOfWeekAndTime, // Repeat weekly
-        uiLocalNotificationDateInterpretation:
-            UILocalNotificationDateInterpretation.absoluteTime,
-      );
-    }
-  }
-
-  Future<void> _cancelNotification(String slotId) async {
-    await flutterLocalNotificationsPlugin.cancel(slotId.hashCode);
-  }
+  // Note: Notification scheduling is now handled by NotificationService in main app
+  // These methods have been removed to prevent duplicate notification scheduling
 
   void _handleBackgroundTap() {
     // Clear selection if there's an active selection
@@ -830,7 +717,7 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
     );
     Color selectedColor = existingSlot?.color ?? availableColors[0];
     bool notificationEnabled =
-        existingSlot?.notificationEnabled ?? globalNotificationsEnabled;
+        existingSlot?.notificationEnabled ?? true; // Default to enabled
 
     // Pro alarm settings
     bool hasAlarm = existingSlot?.hasAlarm ?? widget.isProUser;
@@ -1689,7 +1576,7 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
                   TextButton(
                     onPressed: () {
                       timeSlots.remove(existingSlot);
-                      _cancelNotification(existingSlot.id);
+                      // Note: Notification cancellation is now handled by the main app
                       Navigator.of(context).pop();
                       setState(() {});
                       _notifyTimeSlotsChanged();
@@ -1739,9 +1626,15 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
                     );
 
                     if (existingSlot != null) {
-                      final index = timeSlots.indexOf(existingSlot);
-                      timeSlots[index] = newSlot;
-                      _cancelNotification(existingSlot.id);
+                      final index = timeSlots.indexWhere((slot) => slot.id == existingSlot.id);
+                      if (index != -1) {
+                        timeSlots[index] = newSlot;
+                        // Note: Notification management is handled by main app
+                      } else {
+                        // If not found, treat as new slot
+                        timeSlots.add(newSlot);
+                        _triggerSparkAnimation(selectedColor);
+                      }
                     } else {
                       timeSlots.add(newSlot);
                       // Trigger spark animation for new slots
@@ -1749,8 +1642,8 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
                     }
                     _notifyTimeSlotsChanged();
 
-                    // Schedule notification if enabled
-                    _scheduleNotification(newSlot);
+                    // Note: Notification scheduling is now handled by the main app
+                    // through the NotificationService when time slots change
 
                     Navigator.of(context).pop();
                     _clearSelection();
@@ -1815,25 +1708,24 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
                     GestureDetector(
                       onTap: () {
                         setState(() {
-                          final index = timeSlots.indexOf(slot);
-                          final updatedSlot = TimeSlot(
-                            id: slot.id,
-                            startHour: slot.startHour,
-                            startMinute: slot.startMinute,
-                            endHour: slot.endHour,
-                            endMinute: slot.endMinute,
-                            title: slot.title,
-                            description: slot.description,
-                            color: slot.color,
-                            notificationEnabled: !slot.notificationEnabled,
-                          );
-                          timeSlots[index] = updatedSlot;
-                          _notifyTimeSlotsChanged();
+                          final index = timeSlots.indexWhere((s) => s.id == slot.id);
+                          if (index != -1) {
+                            final updatedSlot = TimeSlot(
+                              id: slot.id,
+                              startHour: slot.startHour,
+                              startMinute: slot.startMinute,
+                              endHour: slot.endHour,
+                              endMinute: slot.endMinute,
+                              title: slot.title,
+                              description: slot.description,
+                              color: slot.color,
+                              notificationEnabled: !slot.notificationEnabled,
+                            );
+                            timeSlots[index] = updatedSlot;
+                            _notifyTimeSlotsChanged();
 
-                          if (updatedSlot.notificationEnabled) {
-                            _scheduleNotification(updatedSlot);
-                          } else {
-                            _cancelNotification(updatedSlot.id);
+                            // Note: Notification scheduling is now handled by the main app
+                            // through the NotificationService when time slots change
                           }
                         });
                       },
@@ -2683,7 +2575,13 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
       color: routineTimeSlot.color != null
           ? Color(routineTimeSlot.color!)
           : availableColors.first,
-      notificationEnabled: true,
+      notificationEnabled: routineTimeSlot.hasAlarm, // Map hasAlarm to notificationEnabled
+      hasAlarm: routineTimeSlot.hasAlarm,
+      hasPreAlarm: routineTimeSlot.hasPreAlarm,
+      preAlarmMinutes: routineTimeSlot.preAlarmMinutes,
+      snoozeEnabled: routineTimeSlot.snoozeEnabled,
+      snoozeDuration: routineTimeSlot.snoozeDuration,
+      maxSnoozeCount: routineTimeSlot.maxSnoozeCount,
     );
   }
 
@@ -2699,6 +2597,12 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
       label: timeSlot.title,
       description: timeSlot.description,
       color: timeSlot.color.toARGB32(),
+      hasAlarm: timeSlot.notificationEnabled, // Map notificationEnabled to hasAlarm
+      hasPreAlarm: timeSlot.hasPreAlarm,
+      preAlarmMinutes: timeSlot.preAlarmMinutes,
+      snoozeEnabled: timeSlot.snoozeEnabled,
+      snoozeDuration: timeSlot.snoozeDuration,
+      maxSnoozeCount: timeSlot.maxSnoozeCount,
       createdAt: DateTime.now(),
     );
   }

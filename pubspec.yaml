@@ -96,7 +96,12 @@ flutter:
 
   # To add assets to your application, add an assets section, like this:
   assets:
-    - assets/animations/
+    - assets/animations/Logo.png
+    - assets/animations/circle_board.riv
+    - assets/animations/circle_light.riv
+    - assets/animations/dark.riv
+    - assets/animations/ThemeToggle.riv
+    - assets/animations/slides/
     - assets/Slides/
 
   # An image asset can refer to one or more resolution-specific "variants", see
