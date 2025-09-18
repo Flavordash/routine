@@ -118,9 +118,11 @@ class _MyAppState extends State<MyApp> {
   }
 
   void toggleTheme() {
+    print('Theme toggle called - current isDarkMode: $isDarkMode');
     setState(() {
       isDarkMode = !isDarkMode;
     });
+    print('Theme toggle completed - new isDarkMode: $isDarkMode');
   }
 
   @override
@@ -162,7 +164,7 @@ class _MyAppState extends State<MyApp> {
                   });
                 },
                 splashDuration: const Duration(milliseconds: 1500),
-                backgroundColor: Colors.white,
+                backgroundColor: isDarkMode ? const Color(0xFF2D2C46) : Colors.white,
               )
             : ErrorBoundary(
                 errorMessage: 'Unable to load the main screen',
@@ -422,33 +424,90 @@ class _MyHomePageState extends State<MyHomePage>
     await NotificationService.instance.scheduleActiveRoutineNotifications(routineSlots);
   }
 
+  // Debug method to test notifications immediately
+  Future<void> _testNotifications() async {
+    print('🔧 DEBUG: Testing notifications...');
+
+    // Test immediate notification first
+    print('📱 Sending test notification...');
+    await NotificationService.instance.testImmediateNotification();
+
+    // Test immediate snooze notification
+    print('🔄 Sending test snooze notification...');
+    await NotificationService.instance.testImmediateSnoozeNotification();
+
+    // Also schedule a test notification for 5 seconds to test snooze
+    print('⏰ Scheduling snooze test for 5 seconds from now...');
+    await NotificationService.instance.scheduleTestNotification(
+      time: DateTime.now().add(const Duration(seconds: 5)),
+      title: 'Test Alarm with Snooze',
+      body: 'Try tapping Snooze to test the functionality',
+    );
+
+    // Schedule a notification for 10 seconds from now
+    print('📅 Scheduling notification for 10 seconds from now...');
+    await _scheduleTestNotificationSoon();
+
+    // Check current routine state
+    print('📱 Current App State:');
+    print('  - Total routines: ${routineSlots.length}');
+    print('  - Active routine: ${activeSlot?.name ?? 'None'}');
+    print('  - Is Pro User: $isProUser');
+    if (activeSlot != null) {
+      print('  - Selected days: ${activeSlot!.selectedDays}');
+      print('  - Time slots with alarms: ${activeSlot!.timeSlots.where((ts) => ts.hasAlarm).length}');
+
+      // Print details about ALL time slots
+      for (int i = 0; i < activeSlot!.timeSlots.length; i++) {
+        final slot = activeSlot!.timeSlots[i];
+        print('    [$i] "${slot.label}" at ${slot.startTime}-${slot.endTime}');
+        print('        - hasAlarm: ${slot.hasAlarm}');
+        if (slot.hasAlarm) {
+          print('        - hasPreAlarm: ${slot.hasPreAlarm} (${slot.preAlarmMinutes}min)');
+          print('        - snoozeEnabled: ${slot.snoozeEnabled} (${slot.snoozeDuration}min, max ${slot.maxSnoozeCount})');
+        }
+      }
+    }
+
+    // Test scheduling
+    print('📅 Testing notification scheduling for active routine...');
+    await _scheduleNotificationsForActiveRoutine();
+  }
+
+  // Schedule a test notification for 10 seconds from now
+  Future<void> _scheduleTestNotificationSoon() async {
+    final futureTime = DateTime.now().add(const Duration(seconds: 10));
+
+    try {
+      await NotificationService.instance.scheduleTestNotification(
+        time: futureTime,
+        title: 'Test Alarm - 10s delay',
+        body: 'This notification was scheduled 10 seconds ago',
+      );
+      print('✅ Test notification scheduled for: ${futureTime.toString()}');
+    } catch (error) {
+      print('❌ Failed to schedule test notification: $error');
+    }
+  }
+
   // Debug method to run notification system verification
   Future<void> _runNotificationTests() async {
     print('🔧 DEBUG: Running notification system verification...');
-    
+
     // Verify day-of-week calculations
     final dayCalculationCorrect = NotificationService.instance.verifyDayOfWeekCalculation();
     print('✅ Day-of-week calculations: ${dayCalculationCorrect ? 'PASSED' : 'FAILED'}');
-    
+
     // Run all test scenarios
     final testResults = await NotificationService.instance.runAllTests();
-    
+
     print('📊 Test Results Summary:');
     for (final result in testResults) {
       print('${result.passed ? '✅' : '❌'} ${result.scenario}: ${result.details}');
     }
-    
+
     final passedCount = testResults.where((r) => r.passed).length;
     print('🎯 Overall: $passedCount/${testResults.length} tests passed');
-    
-    // Test current routine state
-    print('📱 Current App State:');
-    print('  - Total routines: ${routineSlots.length}');
-    print('  - Active routine: ${activeSlot?.name ?? 'None'}');
-    if (activeSlot != null) {
-      print('  - Selected days: ${activeSlot!.selectedDays}');
-      print('  - Time slots with alarms: ${activeSlot!.timeSlots.where((ts) => ts.hasAlarm).length}');
-    }
   }
 
   void _initializeTriggerInputs(StateMachineController controller) {
@@ -677,12 +736,18 @@ class _MyHomePageState extends State<MyHomePage>
               onRetry: () {
                 _loadRoutineSlots();
               },
-              child: SelectableClockWidget(
-                isDarkMode: widget.isDarkMode,
-                isProUser: isProUser,
-                timeSlots: activeSlot?.timeSlots ?? [],
-                onTimeSlotsChanged: _onTimeSlotsChanged,
-                onShowTemplateGallery: _showTemplateGallery,
+              child: GestureDetector(
+                onLongPress: () {
+                  // Debug: Triple-tap to test notifications
+                  _testNotifications();
+                },
+                child: SelectableClockWidget(
+                  isDarkMode: widget.isDarkMode,
+                  isProUser: isProUser,
+                  timeSlots: activeSlot?.timeSlots ?? [],
+                  onTimeSlotsChanged: _onTimeSlotsChanged,
+                  onShowTemplateGallery: _showTemplateGallery,
+                ),
               ),
             ),
           ),

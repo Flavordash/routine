@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart' as widgets;
 import 'package:video_player/video_player.dart';
 import '../../l10n/app_localizations.dart';
@@ -261,12 +262,30 @@ class _SlideMediaWidgetState extends State<SlideMediaWidget> {
 
   Future<void> _initializeVideo() async {
     try {
+      print('🎥 DEBUG: Attempting to load video: ${widget.slideData.videoPath}');
+      print('🎥 DEBUG: Full video path: ${widget.slideData.videoPath}');
+
+      // Test if asset exists using different methods
+      try {
+        await DefaultAssetBundle.of(context).load(widget.slideData.videoPath!);
+        print('🎥 DEBUG: Asset bundle can access the file');
+      } catch (bundleError) {
+        print('🎥 DEBUG: Asset bundle error: $bundleError');
+      }
+
       _videoController = VideoPlayerController.asset(
         widget.slideData.videoPath!,
       );
+
+      print('🎥 DEBUG: VideoPlayerController created, initializing...');
       await _videoController!.initialize();
+      print('🎥 DEBUG: Video controller initialized successfully');
+
       _videoController!.setLooping(true);
       _videoController!.play();
+      print('🎥 ✅ Video loaded successfully: ${widget.slideData.videoPath}');
+      print('🎥 ✅ Video size: ${_videoController!.value.size}');
+      print('🎥 ✅ Video duration: ${_videoController!.value.duration}');
 
       if (mounted) {
         setState(() {
@@ -275,6 +294,10 @@ class _SlideMediaWidgetState extends State<SlideMediaWidget> {
         });
       }
     } catch (e) {
+      print('🎥 ❌ Video loading failed: ${widget.slideData.videoPath}');
+      print('🎥 ❌ Error type: ${e.runtimeType}');
+      print('🎥 ❌ Error details: $e');
+      print('🎥 ❌ Stack trace: ${StackTrace.current}');
       if (mounted) {
         setState(() {
           _hasVideoError = true;

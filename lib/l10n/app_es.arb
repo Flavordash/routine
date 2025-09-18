@@ -69,7 +69,7 @@
   "settingsCustomization": "Configuración y Personalización",
   "settingsCustomizationDesc": "Toca el botón de configuración en la esquina superior derecha para acceder al cambio de tema, opciones de idioma y más funciones de personalización.",
   "proSubscriptionBenefits": "Beneficios de la Suscripción PRO",
-  "proSubscriptionBenefitsDesc": "Suscríbete a PRO por $6.99/año para desbloquear espacios de rutina ilimitados, experiencia sin anuncios y funciones premium. Los usuarios gratuitos obtienen 1 espacio.",
+  "proSubscriptionBenefitsDesc": "Suscríbete a PRO por $6.99/año para desbloquear espacios de rutina ilimitados, experiencia sin anuncios, compartir plantillas comunitarias, alarmas avanzadas, sincronización en la nube y más funciones premium. Los usuarios gratuitos obtienen 1 espacio.",
   "getStarted": "Comenzar",
   "previous": "Anterior",
   "next": "Siguiente",
@@ -92,5 +92,10 @@
   "upgradeToProUnlimited": "Actualizar a Pro para espacios ilimitados",
   "mediaNotFound": "Medio no encontrado",
   "or": "o",
-  "defaultRoutine": "Rutina Predeterminada"
+  "defaultRoutine": "Rutina Predeterminada",
+  "shareTemplates": "• Comparte tus propias plantillas con la comunidad",
+  "advancedAlarmFeatures": "• Funciones avanzadas de alarma con pre-alarma y repetición",
+  "browseImportTemplates": "• Explora e importa plantillas de la comunidad",
+  "removeAllAdsFull": "• Elimina todos los anuncios",
+  "cloudSyncBackupFull": "• Sincronización y respaldo en la nube"
 }

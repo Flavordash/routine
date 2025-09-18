@@ -231,7 +231,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get proSubscriptionBenefitsDesc =>
-      'Suscríbete a PRO por \$6.99/año para desbloquear espacios de rutina ilimitados, experiencia sin anuncios y funciones premium. Los usuarios gratuitos obtienen 1 espacio.';
+      'Suscríbete a PRO por \$6.99/año para desbloquear espacios de rutina ilimitados, experiencia sin anuncios, compartir plantillas comunitarias, alarmas avanzadas, sincronización en la nube y más funciones premium. Los usuarios gratuitos obtienen 1 espacio.';
 
   @override
   String get getStarted => 'Comenzar';
@@ -337,13 +337,13 @@ class AppLocalizationsEs extends AppLocalizations {
   String get monthlyPlan => 'Monthly Plan';
 
   @override
-  String get monthlyPrice => '\$0.99/month';
+  String get monthlyPrice => '\$3.99/month';
 
   @override
   String get yearlyPlan => 'Yearly Plan';
 
   @override
-  String get yearlyPrice => '\$6.99/year';
+  String get yearlyPrice => '\$7.99/year';
 
   @override
   String get savingsText => 'Save 42%';
@@ -362,4 +362,52 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get restorePlaceholder => 'Restoring your purchases. Please wait...';
+
+  @override
+  String get shareTemplates =>
+      '• Comparte tus propias plantillas con la comunidad';
+
+  @override
+  String get advancedAlarmFeatures =>
+      '• Funciones avanzadas de alarma con pre-alarma y repetición';
+
+  @override
+  String get browseImportTemplates =>
+      '• Explora e importa plantillas de la comunidad';
+
+  @override
+  String get removeAllAdsFull => '• Elimina todos los anuncios';
+
+  @override
+  String get cloudSyncBackupFull => '• Sincronización y respaldo en la nube';
+
+  @override
+  String get notifications => 'Notifications';
+
+  @override
+  String get notificationPermissions => 'Notification Permissions';
+
+  @override
+  String get notificationsEnabled => 'Enabled';
+
+  @override
+  String get notificationsDisabled => 'Disabled';
+
+  @override
+  String get notificationSettings => 'Notification Settings';
+
+  @override
+  String get notificationPermissionDescription =>
+      'Allow notifications to receive alarms and reminders for your routines';
+
+  @override
+  String get openSettings => 'Open Settings';
+
+  @override
+  String get notificationPermissionGranted =>
+      'Notifications are enabled! You\'ll receive alarms for your routines.';
+
+  @override
+  String get notificationPermissionDenied =>
+      'Please enable notifications in your device settings to receive alarms.';
 }

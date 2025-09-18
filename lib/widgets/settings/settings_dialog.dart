@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../l10n/app_localizations.dart';
 import '../../services/language_service.dart';
+import '../../services/notification_permission_service.dart';
 import '../dialogs/tutorial_dialog.dart';
 
 class SettingsDialog extends StatefulWidget {
@@ -20,6 +21,20 @@ class SettingsDialog extends StatefulWidget {
 }
 
 class _SettingsDialogState extends State<SettingsDialog> {
+  final NotificationPermissionService _permissionService = NotificationPermissionService.instance;
+  late bool _isDarkMode;
+
+  @override
+  void initState() {
+    super.initState();
+    _isDarkMode = widget.isDarkMode;
+  }
+
+  Future<void> _openNotificationSettings() async {
+    await _permissionService.openNotificationSettings();
+  }
+
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -62,26 +77,23 @@ class _SettingsDialogState extends State<SettingsDialog> {
                       children: [
                         ListTile(
                           leading: Icon(
-                            widget.isDarkMode
+                            _isDarkMode
                                 ? Icons.dark_mode
                                 : Icons.light_mode,
                             color: Theme.of(context).colorScheme.primary,
                           ),
                           title: Text(l10n.theme),
                           subtitle: Text(
-                            widget.isDarkMode ? l10n.darkMode : l10n.lightMode,
+                            _isDarkMode ? l10n.darkMode : l10n.lightMode,
                           ),
                           trailing: Switch(
-                            value: widget.isDarkMode,
+                            value: _isDarkMode,
                             onChanged: (value) {
+                              setState(() {
+                                _isDarkMode = value;
+                              });
                               widget.onThemeToggle();
                             },
-                            activeThumbColor: Theme.of(
-                              context,
-                            ).colorScheme.onSurface,
-                            activeTrackColor: Theme.of(
-                              context,
-                            ).colorScheme.onSurface.withValues(alpha: 0.3),
                           ),
                         ),
                       ],
@@ -107,6 +119,53 @@ class _SettingsDialogState extends State<SettingsDialog> {
                             size: 16,
                           ),
                           onTap: () => _showLanguageSelector(l10n),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    // Notifications Section
+                    _buildSettingsSection(
+                      title: l10n.notifications,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              onPressed: _openNotificationSettings,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Theme.of(context).colorScheme.primary,
+                                foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                              icon: const Icon(
+                                Icons.notifications,
+                                size: 20,
+                              ),
+                              label: Text(
+                                l10n.notificationSettings,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                          child: Text(
+                            l10n.notificationPermissionDescription,
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
                         ),
                       ],
                     ),

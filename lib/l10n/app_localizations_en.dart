@@ -139,7 +139,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chooseColor => 'Choose a color:';
 
   @override
-  String get enableNotifications => 'Enable notifications';
+  String get enableNotifications => 'Enable Notifications';
 
   @override
   String get create => 'Create';
@@ -231,7 +231,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get proSubscriptionBenefitsDesc =>
-      'Subscribe to PRO for \$6.99/year to unlock unlimited routine slots, ad-free experience, and premium features. Free users get 1 slot.';
+      'Subscribe to PRO for \$7.99/year to unlock unlimited routine slots, ad-free experience, community template sharing, advanced alarms, cloud sync, and more premium features. Free users get 1 slot.';
 
   @override
   String get getStarted => 'Get Started';
@@ -276,7 +276,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get upgradeToProAd =>
-      'Upgrade to Pro for \$6.99/year - No ads, unlimited slots!';
+      'Upgrade to Pro for \$7.99/year - No ads, unlimited slots!';
 
   @override
   String get signInSuccess => 'Successfully signed in!';
@@ -335,13 +335,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get monthlyPlan => 'Monthly Plan';
 
   @override
-  String get monthlyPrice => '\$0.99/month';
+  String get monthlyPrice => '\$3.99/month';
 
   @override
   String get yearlyPlan => 'Yearly Plan';
 
   @override
-  String get yearlyPrice => '\$6.99/year';
+  String get yearlyPrice => '\$7.99/year';
 
   @override
   String get savingsText => 'Save 42%';
@@ -360,4 +360,50 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get restorePlaceholder => 'Restoring your purchases. Please wait...';
+
+  @override
+  String get shareTemplates => '• Share your own templates to the community';
+
+  @override
+  String get advancedAlarmFeatures =>
+      '• Advanced alarm features with pre-alarm and snooze';
+
+  @override
+  String get browseImportTemplates => '• Browse and import community templates';
+
+  @override
+  String get removeAllAdsFull => '• Remove all ads';
+
+  @override
+  String get cloudSyncBackupFull => '• Cloud sync and backup';
+
+  @override
+  String get notifications => 'Notifications';
+
+  @override
+  String get notificationPermissions => 'Notification Permissions';
+
+  @override
+  String get notificationsEnabled => 'Enabled';
+
+  @override
+  String get notificationsDisabled => 'Disabled';
+
+  @override
+  String get notificationSettings => 'Notification Settings';
+
+  @override
+  String get notificationPermissionDescription =>
+      'Allow notifications to receive alarms and reminders for your routines';
+
+  @override
+  String get openSettings => 'Open Settings';
+
+  @override
+  String get notificationPermissionGranted =>
+      'Notifications are enabled! You\'ll receive alarms for your routines.';
+
+  @override
+  String get notificationPermissionDenied =>
+      'Please enable notifications in your device settings to receive alarms.';
 }

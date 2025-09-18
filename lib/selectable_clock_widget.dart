@@ -1929,63 +1929,8 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
   }
 
   void _showUpgradeDialog() {
-    showDialog(
-      context: context,
-      barrierColor: Colors.black54,
-      builder: (context) => AlertDialog(
-        backgroundColor: Theme.of(context).colorScheme.surface,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: BorderSide(
-            color: Theme.of(context).colorScheme.onSurface,
-            width: 1,
-          ),
-        ),
-        title: Row(
-          children: [
-            Icon(Icons.star, color: Colors.amber, size: 24),
-            const SizedBox(width: 8),
-            Text(
-              AppLocalizations.of(context)!.upgradeToProButton,
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurface,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(AppLocalizations.of(context)!.proFeatures),
-            const SizedBox(height: 8),
-            Text(AppLocalizations.of(context)!.unlimitedSlots),
-            Text(AppLocalizations.of(context)!.scheduleSpecificDaysFull),
-            Text(AppLocalizations.of(context)!.duplicateRoutines),
-            Text(AppLocalizations.of(context)!.advancedNotificationsFull),
-            Text(AppLocalizations.of(context)!.prioritySupport),
-            Text(AppLocalizations.of(context)!.advancedCustomization),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(
-              AppLocalizations.of(context)!.later,
-              style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _showSubscriptionDialog();
-            },
-            child: Text(AppLocalizations.of(context)!.upgradeNow),
-          ),
-        ],
-      ),
-    );
+    // Directly show subscription dialog, removing the intermediate modal
+    _showSubscriptionDialog();
   }
 
   void _showSubscriptionDialog() {
@@ -2038,23 +1983,35 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
                 _buildProFeature(
                   Icons.all_inclusive,
                   AppLocalizations.of(context)!.unlimitedSlots.substring(2),
-                ), // Remove the bullet point
-                _buildProFeature(
-                  Icons.calendar_today,
-                  AppLocalizations.of(context)!.scheduleSpecificDays,
                 ),
                 _buildProFeature(
-                  Icons.notifications_active,
-                  AppLocalizations.of(context)!.advancedNotifications,
+                  Icons.cloud_download,
+                  AppLocalizations.of(context)!.browseImportTemplates.substring(2),
+                ),
+                _buildProFeature(
+                  Icons.share,
+                  AppLocalizations.of(context)!.shareTemplates.substring(2),
+                ),
+                _buildProFeature(
+                  Icons.alarm,
+                  AppLocalizations.of(context)!.advancedAlarmFeatures.substring(2),
+                ),
+                _buildProFeature(
+                  Icons.calendar_today,
+                  AppLocalizations.of(context)!.scheduleSpecificDaysFull.substring(2),
                 ),
                 _buildProFeature(
                   Icons.backup,
-                  AppLocalizations.of(context)!.cloudSyncBackup,
+                  AppLocalizations.of(context)!.cloudSyncBackupFull.substring(2),
                 ),
                 _buildProFeature(
                   Icons.support,
                   AppLocalizations.of(context)!.prioritySupport.substring(2),
-                ), // Remove the bullet point
+                ),
+                _buildProFeature(
+                  Icons.tune,
+                  AppLocalizations.of(context)!.advancedCustomization.substring(2),
+                ),
 
                 const SizedBox(height: 20),
 

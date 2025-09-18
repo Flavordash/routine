@@ -354,10 +354,10 @@ abstract class AppLocalizations {
   /// **'Choose a color:'**
   String get chooseColor;
 
-  /// Notifications toggle label
+  /// Button text to enable notifications
   ///
   /// In en, this message translates to:
-  /// **'Enable notifications'**
+  /// **'Enable Notifications'**
   String get enableNotifications;
 
   /// Create button text
@@ -519,7 +519,7 @@ abstract class AppLocalizations {
   /// Tutorial slide 5 description
   ///
   /// In en, this message translates to:
-  /// **'Subscribe to PRO for \$6.99/year to unlock unlimited routine slots, ad-free experience, and premium features. Free users get 1 slot.'**
+  /// **'Subscribe to PRO for \$7.99/year to unlock unlimited routine slots, ad-free experience, community template sharing, advanced alarms, cloud sync, and more premium features. Free users get 1 slot.'**
   String get proSubscriptionBenefitsDesc;
 
   /// Tutorial finish button
@@ -603,7 +603,7 @@ abstract class AppLocalizations {
   /// Pro upgrade advertisement text
   ///
   /// In en, this message translates to:
-  /// **'Upgrade to Pro for \$6.99/year - No ads, unlimited slots!'**
+  /// **'Upgrade to Pro for \$7.99/year - No ads, unlimited slots!'**
   String get upgradeToProAd;
 
   /// Sign in success message
@@ -717,7 +717,7 @@ abstract class AppLocalizations {
   /// Monthly subscription price
   ///
   /// In en, this message translates to:
-  /// **'\$0.99/month'**
+  /// **'\$3.99/month'**
   String get monthlyPrice;
 
   /// Yearly subscription plan
@@ -729,7 +729,7 @@ abstract class AppLocalizations {
   /// Yearly subscription price
   ///
   /// In en, this message translates to:
-  /// **'\$6.99/year'**
+  /// **'\$7.99/year'**
   String get yearlyPrice;
 
   /// Savings text for yearly plan
@@ -767,6 +767,90 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Restoring your purchases. Please wait...'**
   String get restorePlaceholder;
+
+  /// Pro feature: share templates to community
+  ///
+  /// In en, this message translates to:
+  /// **'• Share your own templates to the community'**
+  String get shareTemplates;
+
+  /// Pro feature: advanced alarm features
+  ///
+  /// In en, this message translates to:
+  /// **'• Advanced alarm features with pre-alarm and snooze'**
+  String get advancedAlarmFeatures;
+
+  /// Pro feature: browse and import templates
+  ///
+  /// In en, this message translates to:
+  /// **'• Browse and import community templates'**
+  String get browseImportTemplates;
+
+  /// Pro feature: remove all ads (full text)
+  ///
+  /// In en, this message translates to:
+  /// **'• Remove all ads'**
+  String get removeAllAdsFull;
+
+  /// Pro feature: cloud sync and backup (full text)
+  ///
+  /// In en, this message translates to:
+  /// **'• Cloud sync and backup'**
+  String get cloudSyncBackupFull;
+
+  /// Notifications section title
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications'**
+  String get notifications;
+
+  /// Notification permissions title
+  ///
+  /// In en, this message translates to:
+  /// **'Notification Permissions'**
+  String get notificationPermissions;
+
+  /// Status when notifications are enabled
+  ///
+  /// In en, this message translates to:
+  /// **'Enabled'**
+  String get notificationsEnabled;
+
+  /// Status when notifications are disabled
+  ///
+  /// In en, this message translates to:
+  /// **'Disabled'**
+  String get notificationsDisabled;
+
+  /// Button text for notification settings
+  ///
+  /// In en, this message translates to:
+  /// **'Notification Settings'**
+  String get notificationSettings;
+
+  /// Description of why notification permissions are needed
+  ///
+  /// In en, this message translates to:
+  /// **'Allow notifications to receive alarms and reminders for your routines'**
+  String get notificationPermissionDescription;
+
+  /// Button text to open device settings
+  ///
+  /// In en, this message translates to:
+  /// **'Open Settings'**
+  String get openSettings;
+
+  /// Message when notification permissions are granted
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications are enabled! You\'ll receive alarms for your routines.'**
+  String get notificationPermissionGranted;
+
+  /// Message when notification permissions are denied
+  ///
+  /// In en, this message translates to:
+  /// **'Please enable notifications in your device settings to receive alarms.'**
+  String get notificationPermissionDenied;
 }
 
 class _AppLocalizationsDelegate

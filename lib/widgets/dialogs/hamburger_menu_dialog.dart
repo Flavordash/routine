@@ -1021,40 +1021,8 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog>
   }
 
   void _showUpgradeDialog() {
-    showDialog(
-      context: context,
-      barrierColor: Colors.black54,
-      builder: (context) => AlertDialog(
-        title: Text(AppLocalizations.of(context)!.upgradeToProButton),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(AppLocalizations.of(context)!.proFeatures),
-            const SizedBox(height: 8),
-            Text(AppLocalizations.of(context)!.unlimitedSlots),
-            Text('• Schedule routines for specific days (Mon-Sun)'),
-            Text(AppLocalizations.of(context)!.duplicateRoutines),
-            Text('• Advanced notifications with vibration'),
-            Text(AppLocalizations.of(context)!.prioritySupport),
-            Text(AppLocalizations.of(context)!.advancedCustomization),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(AppLocalizations.of(context)!.later),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _showSubscriptionDialog();
-            },
-            child: Text(AppLocalizations.of(context)!.upgradeNow),
-          ),
-        ],
-      ),
-    );
+    // Directly show subscription dialog, removing the intermediate modal
+    _showSubscriptionDialog();
   }
 
   Widget _buildUserProfile() {
@@ -1623,7 +1591,7 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Get unlimited access and remove ads!',
+                  AppLocalizations.of(context)!.getUnlimitedAccess,
                   style: TextStyle(
                     color: Theme.of(context).colorScheme.onSurface,
                     fontSize: 16,
@@ -1635,29 +1603,48 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog>
                 _buildProFeature(
                   context,
                   Icons.block,
-                  'Remove all advertisements',
+                  AppLocalizations.of(context)!.removeAllAdsFull.substring(2),
                 ),
                 _buildProFeature(
                   context,
                   Icons.all_inclusive,
                   AppLocalizations.of(context)!.unlimitedSlots.substring(2),
-                ), // Remove the bullet point
+                ),
+                _buildProFeature(
+                  context,
+                  Icons.cloud_download,
+                  AppLocalizations.of(context)!.browseImportTemplates.substring(2),
+                ),
+                _buildProFeature(
+                  context,
+                  Icons.share,
+                  AppLocalizations.of(context)!.shareTemplates.substring(2),
+                ),
+                _buildProFeature(
+                  context,
+                  Icons.alarm,
+                  AppLocalizations.of(context)!.advancedAlarmFeatures.substring(2),
+                ),
                 _buildProFeature(
                   context,
                   Icons.calendar_today,
-                  'Schedule routines for specific days',
+                  AppLocalizations.of(context)!.scheduleSpecificDaysFull.substring(2),
                 ),
                 _buildProFeature(
                   context,
-                  Icons.notifications_active,
-                  'Advanced notifications with vibration',
+                  Icons.backup,
+                  AppLocalizations.of(context)!.cloudSyncBackupFull.substring(2),
                 ),
-                _buildProFeature(context, Icons.backup, 'Cloud sync backup'),
                 _buildProFeature(
                   context,
                   Icons.support,
                   AppLocalizations.of(context)!.prioritySupport.substring(2),
-                ), // Remove the bullet point
+                ),
+                _buildProFeature(
+                  context,
+                  Icons.tune,
+                  AppLocalizations.of(context)!.advancedCustomization.substring(2),
+                ),
 
                 const SizedBox(height: 20),
 
@@ -1672,7 +1659,7 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog>
                   child: Column(
                     children: [
                       Text(
-                        'Choose Your Plan',
+                        AppLocalizations.of(context)!.chooseYourPlan,
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
@@ -1685,7 +1672,7 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog>
                       _buildSubscriptionOption(
                         context,
                         title: 'Monthly Plan',
-                        price: '\$4.99/month',
+                        price: '\$3.99/month',
                         savings: null,
                         isPopular: false,
                         onTap: () => _purchaseSubscription(monthly: true),
@@ -1697,8 +1684,8 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog>
                       _buildSubscriptionOption(
                         context,
                         title: 'Yearly Plan',
-                        price: '\$6.99/year',
-                        savings: 'Save 88%!',
+                        price: '\$7.99/year',
+                        savings: 'Save 83%!',
                         isPopular: true,
                         onTap: () => _purchaseSubscription(monthly: false),
                       ),

@@ -228,7 +228,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get proSubscriptionBenefitsDesc =>
-      '연간 \$6.99로 프로 구독하여 무제한 루틴 슬롯, 광고 없는 경험 및 프리미엄 기능을 잠금 해제하세요. 무료 사용자는 1개 슬롯을 얻습니다.';
+      '연간 \$7.99로 프로 구독하여 무제한 루틴 슬롯, 광고 없는 경험, 커뮤니티 템플릿 공유, 고급 알람, 클라우드 동기화 및 더 많은 프리미엄 기능을 잠금 해제하세요. 무료 사용자는 1개 슬롯을 얻습니다.';
 
   @override
   String get getStarted => '시작하기';
@@ -329,13 +329,13 @@ class AppLocalizationsKo extends AppLocalizations {
   String get monthlyPlan => '월간 요금제';
 
   @override
-  String get monthlyPrice => '\$0.99/월';
+  String get monthlyPrice => '\$3.99/월';
 
   @override
   String get yearlyPlan => '연간 요금제';
 
   @override
-  String get yearlyPrice => '\$6.99/년';
+  String get yearlyPrice => '\$7.99/년';
 
   @override
   String get savingsText => '42% 절약';
@@ -354,4 +354,49 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get restorePlaceholder => '구매를 복원 중입니다. 잠시 기다려 주세요...';
+
+  @override
+  String get shareTemplates => '• 커뮤니티에 나만의 템플릿 공유';
+
+  @override
+  String get advancedAlarmFeatures => '• 사전 알람 및 스누즈 기능이 포함된 고급 알람';
+
+  @override
+  String get browseImportTemplates => '• 커뮤니티 템플릿 탐색 및 가져오기';
+
+  @override
+  String get removeAllAdsFull => '• 모든 광고 제거';
+
+  @override
+  String get cloudSyncBackupFull => '• 클라우드 동기화 및 백업';
+
+  @override
+  String get notifications => 'Notifications';
+
+  @override
+  String get notificationPermissions => 'Notification Permissions';
+
+  @override
+  String get notificationsEnabled => 'Enabled';
+
+  @override
+  String get notificationsDisabled => 'Disabled';
+
+  @override
+  String get notificationSettings => 'Notification Settings';
+
+  @override
+  String get notificationPermissionDescription =>
+      'Allow notifications to receive alarms and reminders for your routines';
+
+  @override
+  String get openSettings => 'Open Settings';
+
+  @override
+  String get notificationPermissionGranted =>
+      'Notifications are enabled! You\'ll receive alarms for your routines.';
+
+  @override
+  String get notificationPermissionDenied =>
+      'Please enable notifications in your device settings to receive alarms.';
 }

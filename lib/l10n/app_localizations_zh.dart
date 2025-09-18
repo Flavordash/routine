@@ -225,7 +225,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get proSubscriptionBenefitsDesc =>
-      '订阅专业版每年\$6.99，解锁无限日程槽位、无广告体验和高级功能。免费用户可获得1个槽位。';
+      '订阅专业版每年\$6.99，解锁无限日程槽位、无广告体验、社区模板分享、高级闹钟、云同步和更多高级功能。免费用户可获得1个槽位。';
 
   @override
   String get getStarted => '开始使用';
@@ -326,13 +326,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get monthlyPlan => 'Monthly Plan';
 
   @override
-  String get monthlyPrice => '\$0.99/month';
+  String get monthlyPrice => '\$3.99/month';
 
   @override
   String get yearlyPlan => 'Yearly Plan';
 
   @override
-  String get yearlyPrice => '\$6.99/year';
+  String get yearlyPrice => '\$7.99/year';
 
   @override
   String get savingsText => 'Save 42%';
@@ -351,4 +351,49 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get restorePlaceholder => 'Restoring your purchases. Please wait...';
+
+  @override
+  String get shareTemplates => '• 与社区分享您的自定义模板';
+
+  @override
+  String get advancedAlarmFeatures => '• 具有预警和贪睡功能的高级闹钟';
+
+  @override
+  String get browseImportTemplates => '• 浏览和导入社区模板';
+
+  @override
+  String get removeAllAdsFull => '• 移除所有广告';
+
+  @override
+  String get cloudSyncBackupFull => '• 云同步和备份';
+
+  @override
+  String get notifications => 'Notifications';
+
+  @override
+  String get notificationPermissions => 'Notification Permissions';
+
+  @override
+  String get notificationsEnabled => 'Enabled';
+
+  @override
+  String get notificationsDisabled => 'Disabled';
+
+  @override
+  String get notificationSettings => 'Notification Settings';
+
+  @override
+  String get notificationPermissionDescription =>
+      'Allow notifications to receive alarms and reminders for your routines';
+
+  @override
+  String get openSettings => 'Open Settings';
+
+  @override
+  String get notificationPermissionGranted =>
+      'Notifications are enabled! You\'ll receive alarms for your routines.';
+
+  @override
+  String get notificationPermissionDenied =>
+      'Please enable notifications in your device settings to receive alarms.';
 }

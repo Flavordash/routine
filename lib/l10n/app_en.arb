@@ -300,7 +300,7 @@
   "@proSubscriptionBenefits": {
     "description": "Tutorial slide 5 title"
   },
-  "proSubscriptionBenefitsDesc": "Subscribe to PRO for $6.99/year to unlock unlimited routine slots, ad-free experience, and premium features. Free users get 1 slot.",
+  "proSubscriptionBenefitsDesc": "Subscribe to PRO for $7.99/year to unlock unlimited routine slots, ad-free experience, community template sharing, advanced alarms, cloud sync, and more premium features. Free users get 1 slot.",
   "@proSubscriptionBenefitsDesc": {
     "description": "Tutorial slide 5 description"
   },
@@ -356,7 +356,7 @@
   "@advertisementSpace": {
     "description": "Advertisement placeholder text"
   },
-  "upgradeToProAd": "Upgrade to Pro for $6.99/year - No ads, unlimited slots!",
+  "upgradeToProAd": "Upgrade to Pro for $7.99/year - No ads, unlimited slots!",
   "@upgradeToProAd": {
     "description": "Pro upgrade advertisement text"
   },
@@ -432,7 +432,7 @@
   "@monthlyPlan": {
     "description": "Monthly subscription plan"
   },
-  "monthlyPrice": "$0.99/month",
+  "monthlyPrice": "$3.99/month",
   "@monthlyPrice": {
     "description": "Monthly subscription price"
   },
@@ -440,7 +440,7 @@
   "@yearlyPlan": {
     "description": "Yearly subscription plan"
   },
-  "yearlyPrice": "$6.99/year",
+  "yearlyPrice": "$7.99/year",
   "@yearlyPrice": {
     "description": "Yearly subscription price"
   },
@@ -467,5 +467,65 @@
   "restorePlaceholder": "Restoring your purchases. Please wait...",
   "@restorePlaceholder": {
     "description": "Restore processing placeholder text"
+  },
+  "shareTemplates": "• Share your own templates to the community",
+  "@shareTemplates": {
+    "description": "Pro feature: share templates to community"
+  },
+  "advancedAlarmFeatures": "• Advanced alarm features with pre-alarm and snooze",
+  "@advancedAlarmFeatures": {
+    "description": "Pro feature: advanced alarm features"
+  },
+  "browseImportTemplates": "• Browse and import community templates",
+  "@browseImportTemplates": {
+    "description": "Pro feature: browse and import templates"
+  },
+  "removeAllAdsFull": "• Remove all ads",
+  "@removeAllAdsFull": {
+    "description": "Pro feature: remove all ads (full text)"
+  },
+  "cloudSyncBackupFull": "• Cloud sync and backup",
+  "@cloudSyncBackupFull": {
+    "description": "Pro feature: cloud sync and backup (full text)"
+  },
+  "notifications": "Notifications",
+  "@notifications": {
+    "description": "Notifications section title"
+  },
+  "notificationPermissions": "Notification Permissions",
+  "@notificationPermissions": {
+    "description": "Notification permissions title"
+  },
+  "notificationsEnabled": "Enabled",
+  "@notificationsEnabled": {
+    "description": "Status when notifications are enabled"
+  },
+  "notificationsDisabled": "Disabled",
+  "@notificationsDisabled": {
+    "description": "Status when notifications are disabled"
+  },
+  "enableNotifications": "Enable Notifications",
+  "@enableNotifications": {
+    "description": "Button text to enable notifications"
+  },
+  "notificationSettings": "Notification Settings",
+  "@notificationSettings": {
+    "description": "Button text for notification settings"
+  },
+  "notificationPermissionDescription": "Allow notifications to receive alarms and reminders for your routines",
+  "@notificationPermissionDescription": {
+    "description": "Description of why notification permissions are needed"
+  },
+  "openSettings": "Open Settings",
+  "@openSettings": {
+    "description": "Button text to open device settings"
+  },
+  "notificationPermissionGranted": "Notifications are enabled! You'll receive alarms for your routines.",
+  "@notificationPermissionGranted": {
+    "description": "Message when notification permissions are granted"
+  },
+  "notificationPermissionDenied": "Please enable notifications in your device settings to receive alarms.",
+  "@notificationPermissionDenied": {
+    "description": "Message when notification permissions are denied"
   }
 }

@@ -1,45 +1,37 @@
-# Tutorial Slide Media Files
+# Tutorial Slides
 
-This directory contains the video and image files for the tutorial slides.
+This directory contains assets for the tutorial system in the Routine 24 app.
 
-## File Structure
+## Overview
 
-For each slide (2-5), you should have:
-- `slideX.mp4` - The video file for the slide
-- `slideX.png` - A fallback image in case the video fails to load
+The tutorial videos are located in the `assets/Slides/` directory (parent level) and are used by the tutorial dialog to guide new users through the app's features.
 
-## Current Slide Mappings
+## Current Tutorial Structure
 
-- **Slide 2**: Creating Time Slots
-  - Video: `slide2.mp4`
-  - Fallback: `slide2.png`
+The tutorial consists of 5 slides:
 
-- **Slide 3**: Managing Your Schedule  
-  - Video: `slide3.mp4`
-  - Fallback: `slide3.png`
+1. **Slide 1**: Welcome screen with app logo (`assets/animations/Logo.png`)
+2. **Slide 2**: Creating Time Slots (`assets/Slides/Slide2.mp4`)
+3. **Slide 3**: Managing Your Schedule (`assets/Slides/Slide3.mp4`)
+4. **Slide 4**: Settings & Customization (`assets/Slides/Slide4.mp4`)
+5. **Slide 5**: PRO Subscription Benefits (`assets/Slides/Slide5.mp4`)
 
-- **Slide 4**: Settings & Customization
-  - Video: `slide4.mp4`
-  - Fallback: `slide4.png`
+## File Format Support
 
-- **Slide 5**: PRO Subscription Benefits
-  - Video: `slide5.mp4`  
-  - Fallback: `slide5.png`
+The tutorial system supports both `.mp4` and `.mov` video formats through Flutter's `video_player` package.
 
-## Supported Formats
+## Adding New Tutorial Content
 
-- **Videos**: MP4, MOV
-- **Images**: PNG, JPG
+To update tutorial content:
 
-## How It Works
+1. Replace video files in `assets/Slides/` directory
+2. Update file references in `lib/widgets/dialogs/tutorial_dialog.dart`
+3. Run `flutter clean` and `flutter pub get` to refresh assets
+4. Update localization strings in `lib/l10n/app_en.arb` if needed
 
-1. The app will try to load the video file first
-2. If the video fails to load, it will show the PNG fallback
-3. If both fail, it will show the original icon as a final fallback
+## Technical Notes
 
-## To Add Your Files
-
-1. Replace the placeholder files in this directory with your actual video and image files
-2. Make sure the filenames match exactly: `slide2.mp4`, `slide2.png`, etc.
-3. Run `flutter clean` and `flutter pub get` after adding new assets
-4. The tutorial will automatically use your new media files
+- Videos should be optimized for mobile playback
+- Keep file sizes reasonable for app bundle size
+- Test on both iOS and Android devices
+- Videos auto-play and loop during tutorial display

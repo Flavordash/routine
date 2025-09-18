@@ -69,7 +69,7 @@
   "settingsCustomization": "设置与自定义",
   "settingsCustomizationDesc": "点击右上角的设置按钮来访问主题切换、语言选项和更多自定义功能。",
   "proSubscriptionBenefits": "专业版订阅优势",
-  "proSubscriptionBenefitsDesc": "订阅专业版每年$6.99，解锁无限日程槽位、无广告体验和高级功能。免费用户可获得1个槽位。",
+  "proSubscriptionBenefitsDesc": "订阅专业版每年$6.99，解锁无限日程槽位、无广告体验、社区模板分享、高级闹钟、云同步和更多高级功能。免费用户可获得1个槽位。",
   "getStarted": "开始使用",
   "previous": "上一步",
   "next": "下一步",
@@ -92,5 +92,10 @@
   "upgradeToProUnlimited": "升级到专业版获得无限槽位",
   "mediaNotFound": "找不到媒体",
   "or": "或",
-  "defaultRoutine": "默认日程"
+  "defaultRoutine": "默认日程",
+  "shareTemplates": "• 与社区分享您的自定义模板",
+  "advancedAlarmFeatures": "• 具有预警和贪睡功能的高级闹钟",
+  "browseImportTemplates": "• 浏览和导入社区模板",
+  "removeAllAdsFull": "• 移除所有广告",
+  "cloudSyncBackupFull": "• 云同步和备份"
 }

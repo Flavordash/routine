@@ -28,7 +28,13 @@
       "Bash(dart run intl_utils:generate:*)",
       "Bash(sed:*)",
       "Bash(awk:*)",
-      "Bash(pkill:*)"
+      "Bash(pkill:*)",
+      "Bash(rm:*)",
+      "Bash(ping:*)",
+      "Read(//Users/dashpill/Library/Android/sdk/**)",
+      "Read(//Users/dashpill/.android/avd/**)",
+      "Bash(/Users/dashpill/Library/Android/sdk/emulator/emulator -avd Pixel_6_API_21)",
+      "Bash(ffprobe:*)"
     ],
     "deny": [],
     "ask": []
