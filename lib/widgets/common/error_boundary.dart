@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../constants/app_constants.dart';
 import '../../constants/text_styles.dart';
+import '../../utils/logger.dart';
 
 // Error Boundary Widget
 class ErrorBoundary extends StatefulWidget {
@@ -37,11 +38,26 @@ class _ErrorBoundaryState extends State<ErrorBoundary> {
     );
   }
 
-  void _handleError(Object error) {
+  void _handleError(Object error, [StackTrace? stackTrace]) {
+    // Log the error with context
+    Logger.instance.error('ErrorBoundary caught error: $error');
+    if (stackTrace != null) {
+      Logger.instance.error('Stack trace: $stackTrace');
+    }
+
+    // Report error for analytics (in production)
+    _reportError(error, stackTrace);
+
     setState(() {
       hasError = true;
       this.error = error;
     });
+  }
+
+  void _reportError(Object error, StackTrace? stackTrace) {
+    // This is where you'd integrate with crash analytics like Firebase Crashlytics
+    // For now, we'll just use our logger
+    Logger.instance.error('Error reported to analytics: ${error.runtimeType} - $error');
   }
 
   Widget _buildErrorWidget() {

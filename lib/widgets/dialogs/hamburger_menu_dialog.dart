@@ -199,7 +199,7 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog>
                     children: [
                       Icon(Icons.library_books, size: 18),
                       const SizedBox(width: 8),
-                      Text('Browse Templates'),
+                      Text(AppLocalizations.of(context)!.browseTemplates),
                     ],
                   ),
                 ),
@@ -347,55 +347,55 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog>
                 }
               },
               itemBuilder: (context) => [
-                const PopupMenuItem(
+                PopupMenuItem(
                   value: 'rename',
                   child: ListTile(
                     leading: Icon(Icons.edit, size: 16),
-                    title: Text('Rename'),
+                    title: Text(AppLocalizations.of(context)!.rename),
                     contentPadding: EdgeInsets.zero,
                   ),
                 ),
-                const PopupMenuItem(
+                PopupMenuItem(
                   value: 'colorSettings',
                   child: ListTile(
                     leading: Icon(Icons.palette, size: 16),
-                    title: Text('Color Settings'),
+                    title: Text(AppLocalizations.of(context)!.colorSettings),
                     contentPadding: EdgeInsets.zero,
                   ),
                 ),
                 if (widget.isProUser) ...[
-                  const PopupMenuItem(
+                  PopupMenuItem(
                     value: 'duplicate',
                     child: ListTile(
                       leading: Icon(Icons.copy, size: 16),
-                      title: Text('Duplicate'),
+                      title: Text(AppLocalizations.of(context)!.duplicate),
                       contentPadding: EdgeInsets.zero,
                     ),
                   ),
-                  const PopupMenuItem(
+                  PopupMenuItem(
                     value: 'daySettings',
                     child: ListTile(
                       leading: Icon(Icons.date_range, size: 16),
-                      title: Text('Day Settings'),
+                      title: Text(AppLocalizations.of(context)!.daySettings),
                       contentPadding: EdgeInsets.zero,
                     ),
                   ),
-                  const PopupMenuItem(
+                  PopupMenuItem(
                     value: 'shareTemplate',
                     child: ListTile(
                       leading: Icon(Icons.share, size: 16),
-                      title: Text('Share as Template'),
+                      title: Text(AppLocalizations.of(context)!.shareAsTemplate),
                       contentPadding: EdgeInsets.zero,
                     ),
                   ),
                 ],
                 if (routineSlots.length > 1)
-                  const PopupMenuItem(
+                  PopupMenuItem(
                     value: 'delete',
                     child: ListTile(
                       leading: Icon(Icons.delete, size: 16, color: Colors.red),
                       title: Text(
-                        'Delete',
+                        AppLocalizations.of(context)!.delete,
                         style: TextStyle(color: Colors.red),
                       ),
                       contentPadding: EdgeInsets.zero,
@@ -455,11 +455,11 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog>
       context: context,
       barrierColor: Colors.black54,
       builder: (context) => AlertDialog(
-        title: const Text('Rename Routine'),
+        title: Text(AppLocalizations.of(context)!.renameRoutine),
         content: TextField(
           controller: controller,
-          decoration: const InputDecoration(
-            labelText: 'Routine Name',
+          decoration: InputDecoration(
+            labelText: AppLocalizations.of(context)!.routineName,
             border: OutlineInputBorder(),
           ),
         ),
@@ -473,24 +473,24 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog>
               if (controller.text.trim().isNotEmpty) {
                 // Find slot by ID instead of object reference to avoid -1 index
                 final index = routineSlots.indexWhere((s) => s.id == slot.id);
-                
+
                 if (index != -1) {
                   setState(() {
                     routineSlots[index] = slot.copyWith(
                       name: controller.text.trim(),
                     );
-                    
+
                     // Update activeSlot reference if this is the active slot
                     if (slot.isActive) {
                       activeSlot = routineSlots[index];
                     }
                   });
-                  
+
                   // Save changes
                   widget.onSlotsChanged(routineSlots, activeSlot);
-                  
+
                   Navigator.pop(context);
-                  
+
                   // Show success message
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
@@ -510,7 +510,7 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog>
                 }
               }
             },
-            child: const Text('Save'),
+            child: Text(AppLocalizations.of(context)!.save),
           ),
         ],
       ),
@@ -564,8 +564,8 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog>
       context: context,
       barrierColor: Colors.black54,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Routine'),
-        content: Text('Are you sure you want to delete "${slot.name}"?'),
+        title: Text(AppLocalizations.of(context)!.deleteRoutine),
+        content: Text(AppLocalizations.of(context)!.deleteRoutineConfirm(slot.name)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -598,7 +598,7 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog>
               }
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Delete'),
+            child: Text(AppLocalizations.of(context)!.delete),
           ),
         ],
       ),
@@ -620,13 +620,13 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog>
   void _showDaySettingsDialog(RoutineSlot slot) {
     List<int> selectedDays = List.from(slot.selectedDays);
     final dayNames = [
-      'Monday',
-      'Tuesday',
-      'Wednesday',
-      'Thursday',
-      'Friday',
-      'Saturday',
-      'Sunday',
+      AppLocalizations.of(context)!.monday,
+      AppLocalizations.of(context)!.tuesday,
+      AppLocalizations.of(context)!.wednesday,
+      AppLocalizations.of(context)!.thursday,
+      AppLocalizations.of(context)!.friday,
+      AppLocalizations.of(context)!.saturday,
+      AppLocalizations.of(context)!.sunday,
     ];
 
     showDialog(
@@ -640,7 +640,7 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog>
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Select which days this routine should be active:'),
+                Text(AppLocalizations.of(context)!.selectDaysActive),
                 const SizedBox(height: 16),
                 ...dayNames.asMap().entries.map((entry) {
                   final dayIndex = entry.key + 1; // 1-7 for Monday-Sunday
@@ -858,49 +858,49 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog>
       barrierColor: Colors.black54,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          title: const Text('Share as Template'),
+          title: Text(AppLocalizations.of(context)!.shareAsTemplate),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Template Name *',
+                Text(
+                  '${AppLocalizations.of(context)!.templateName} *',
                   style: TextStyle(fontWeight: FontWeight.w500),
                 ),
                 const SizedBox(height: 8),
                 TextField(
                   controller: titleController,
-                  decoration: const InputDecoration(
-                    hintText: 'Enter template name...',
+                  decoration: InputDecoration(
+                    hintText: AppLocalizations.of(context)!.enterTemplateName,
                     border: OutlineInputBorder(),
                   ),
                 ),
                 const SizedBox(height: 16),
 
-                const Text(
-                  'Description',
+                Text(
+                  AppLocalizations.of(context)!.description,
                   style: TextStyle(fontWeight: FontWeight.w500),
                 ),
                 const SizedBox(height: 8),
                 TextField(
                   controller: descriptionController,
                   maxLines: 3,
-                  decoration: const InputDecoration(
-                    hintText: 'Describe this routine...',
+                  decoration: InputDecoration(
+                    hintText: AppLocalizations.of(context)!.describeRoutine,
                     border: OutlineInputBorder(),
                   ),
                 ),
                 const SizedBox(height: 16),
 
-                const Text(
-                  'Category',
+                Text(
+                  AppLocalizations.of(context)!.category,
                   style: TextStyle(fontWeight: FontWeight.w500),
                 ),
                 const SizedBox(height: 8),
                 DropdownButtonFormField<String>(
                   initialValue: selectedCategory,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     border: OutlineInputBorder(),
                   ),
                   items: categories.map((category) {
@@ -917,14 +917,14 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog>
                 ),
                 const SizedBox(height: 16),
 
-                const Text(
-                  'Lifestyle Type',
+                Text(
+                  AppLocalizations.of(context)!.lifestyleType,
                   style: TextStyle(fontWeight: FontWeight.w500),
                 ),
                 const SizedBox(height: 8),
                 DropdownButtonFormField<String>(
                   initialValue: selectedLifestyle,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     border: OutlineInputBorder(),
                   ),
                   items: lifestyles.map((lifestyle) {
@@ -945,7 +945,7 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog>
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
+              child: Text(AppLocalizations.of(context)!.cancel),
             ),
             ElevatedButton(
               onPressed: () async {
@@ -954,8 +954,8 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog>
 
                 if (templateName.isEmpty) {
                   ScaffoldMessenger.of(currentContext).showSnackBar(
-                    const SnackBar(
-                      content: Text('Please enter a template name'),
+                    SnackBar(
+                      content: Text(AppLocalizations.of(context)!.pleaseEnterTemplateName),
                     ),
                   );
                   return;
@@ -973,7 +973,7 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog>
                       children: [
                         CircularProgressIndicator(),
                         const SizedBox(height: 16),
-                        Text('Sharing template...'),
+                        Text(AppLocalizations.of(context)!.sharingTemplate),
                       ],
                     ),
                   ),
@@ -1004,15 +1004,15 @@ class _HamburgerMenuDialogState extends State<HamburgerMenuDialog>
                     SnackBar(
                       content: Text(
                         success
-                            ? 'Template "$templateName" shared successfully!'
-                            : 'Failed to share template. Please try again.',
+                            ? AppLocalizations.of(currentContext)!.templateSharedSuccess(templateName)
+                            : AppLocalizations.of(currentContext)!.templateShareFailed,
                       ),
                       backgroundColor: success ? Colors.green : Colors.red,
                     ),
                   );
                 }
               },
-              child: const Text('Share'),
+              child: Text(AppLocalizations.of(context)!.share),
             ),
           ],
         ),

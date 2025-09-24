@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 
 // Custom Exception Classes
 class AppException implements Exception {
@@ -19,16 +18,15 @@ class AppException implements Exception {
 }
 
 class NetworkException extends AppException {
-  const NetworkException(String message) : super(message, code: 'network_error');
+  const NetworkException(super.message) : super(code: 'network_error');
 }
 
 class AuthenticationException extends AppException {
-  const AuthenticationException(String message, {String? code})
-      : super(message, code: code);
+  const AuthenticationException(super.message, {super.code});
 }
 
 class ValidationException extends AppException {
-  const ValidationException(String message) : super(message, code: 'validation_error');
+  const ValidationException(super.message) : super(code: 'validation_error');
 }
 
 // Error Handler Utility

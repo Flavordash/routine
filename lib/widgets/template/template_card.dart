@@ -79,9 +79,7 @@ class TemplateCard extends StatelessWidget {
                 template.description,
                 style: TextStyle(
                   fontSize: 11,
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.onSurface.withValues(alpha: 0.7),
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                 ),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
@@ -94,65 +92,66 @@ class TemplateCard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Flexible(
-                    child: GestureDetector(
-                      onTap: onLike,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Like button
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                isLiked
-                                    ? Icons.favorite
-                                    : Icons.favorite_border,
-                                size: 22,
-                                color: isLiked
-                                    ? Colors.red
-                                    : Theme.of(context).colorScheme.onSurface
-                                          .withValues(alpha: 0.7),
-                              ),
-                              const SizedBox(width: 2),
-                              Text(
-                                '${template.likes}',
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurface
-                                      .withValues(alpha: 0.6),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Like button (only for non-official templates)
+                        if (!template.isOfficial)
+                          GestureDetector(
+                            onTap: onLike,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  isLiked
+                                      ? Icons.favorite
+                                      : Icons.favorite_border,
+                                  size: 22,
+                                  color: isLiked
+                                      ? Colors.red
+                                      : Theme.of(context).colorScheme.onSurface
+                                            .withValues(alpha: 0.7),
                                 ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 2),
-                          // Usage count
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.download,
-                                size: 12,
-                                color: Theme.of(context).colorScheme.onSurface
-                                      .withValues(alpha: 0.5),
-                              ),
-                              const SizedBox(width: 2),
-                              Text(
-                                '${template.usageCount} used',
-                                style: TextStyle(
-                                  fontSize: 9,
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurface
-                                      .withValues(alpha: 0.5),
+                                const SizedBox(width: 2),
+                                Text(
+                                  '${template.likes}',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurface
+                                        .withValues(alpha: 0.6),
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                        ],
-                      ),
+                        if (!template.isOfficial) const SizedBox(height: 2),
+                        // Usage count
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.download,
+                              size: 12,
+                              color: Theme.of(context).colorScheme.onSurface
+                                    .withValues(alpha: 0.5),
+                            ),
+                            const SizedBox(width: 2),
+                            Text(
+                              '${template.usageCount} used',
+                              style: TextStyle(
+                                fontSize: 9,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurface
+                                    .withValues(alpha: 0.5),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
                   ),
                   Flexible(
@@ -160,9 +159,7 @@ class TemplateCard extends StatelessWidget {
                       template.authorName,
                       style: TextStyle(
                         fontSize: 9,
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withValues(alpha: 0.5),
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                         fontStyle: FontStyle.italic,
                       ),
                       maxLines: 1,
@@ -197,9 +194,7 @@ class TemplateCard extends StatelessWidget {
             Text(
               'This template contains ${template.timeSlots.length} time slot(s) that you can import and customize.',
               style: TextStyle(
-                color: Theme.of(
-                  context,
-                ).colorScheme.onSurface.withValues(alpha: 0.7),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
               ),
             ),
           ],

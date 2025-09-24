@@ -777,7 +777,7 @@ abstract class AppLocalizations {
   /// Pro feature: advanced alarm features
   ///
   /// In en, this message translates to:
-  /// **'• Advanced alarm features with pre-alarm and snooze'**
+  /// **'• Advanced alarm features with pre-alarm and Smart Intervals'**
   String get advancedAlarmFeatures;
 
   /// Pro feature: browse and import templates
@@ -851,6 +851,384 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Please enable notifications in your device settings to receive alarms.'**
   String get notificationPermissionDenied;
+
+  /// PRO feature: Pre-alarm setting label
+  ///
+  /// In en, this message translates to:
+  /// **'Pre-Alarm'**
+  String get preAlarm;
+
+  /// PRO feature: Pre-alarm time setting label
+  ///
+  /// In en, this message translates to:
+  /// **'Pre-alarm time:'**
+  String get preAlarmTime;
+
+  /// PRO feature: Smart Intervals setting label
+  ///
+  /// In en, this message translates to:
+  /// **'Smart Intervals'**
+  String get smartIntervals;
+
+  /// PRO feature: Smart Intervals duration setting label
+  ///
+  /// In en, this message translates to:
+  /// **'Interval Duration:'**
+  String get intervalDuration;
+
+  /// PRO feature: Silent intervals setting label
+  ///
+  /// In en, this message translates to:
+  /// **'Silent Intervals'**
+  String get silentIntervals;
+
+  /// PRO feature: Progress messages setting label
+  ///
+  /// In en, this message translates to:
+  /// **'Progress Messages'**
+  String get progressMessages;
+
+  /// Short format for minutes
+  ///
+  /// In en, this message translates to:
+  /// **'{minutes} min'**
+  String minutesShort(int minutes);
+
+  /// Count format for attempts
+  ///
+  /// In en, this message translates to:
+  /// **'{count} times'**
+  String timesCount(int count);
+
+  /// PRO upgrade promotion text for advanced alarm features
+  ///
+  /// In en, this message translates to:
+  /// **'Get advanced alarm features with pre-alarm warnings and Smart Intervals functionality.'**
+  String get advancedAlarmPromoText;
+
+  /// Button text to fill empty time slots with free time
+  ///
+  /// In en, this message translates to:
+  /// **'Fill Free Time'**
+  String get fillFreeTime;
+
+  /// Button text to browse template gallery
+  ///
+  /// In en, this message translates to:
+  /// **'Browse Templates'**
+  String get browseTemplates;
+
+  /// Success message when filling free time
+  ///
+  /// In en, this message translates to:
+  /// **'Filled 24-hour period with Free Time!'**
+  String get filledFreeTime;
+
+  /// Message when no gaps available to fill
+  ///
+  /// In en, this message translates to:
+  /// **'No free time gaps found to fill'**
+  String get noFreeTimeGaps;
+
+  /// Purchase success message
+  ///
+  /// In en, this message translates to:
+  /// **'Purchase successful! You now have PRO access.'**
+  String get purchaseSuccessful;
+
+  /// Purchase failure message
+  ///
+  /// In en, this message translates to:
+  /// **'Purchase failed: {error}'**
+  String purchaseFailed(String error);
+
+  /// Purchase restoration success message
+  ///
+  /// In en, this message translates to:
+  /// **'Purchases restored successfully!'**
+  String get purchasesRestored;
+
+  /// Purchase restoration failure message
+  ///
+  /// In en, this message translates to:
+  /// **'Restore failed: {error}'**
+  String restoreFailed(String error);
+
+  /// Monday day name
+  ///
+  /// In en, this message translates to:
+  /// **'Monday'**
+  String get monday;
+
+  /// Tuesday day name
+  ///
+  /// In en, this message translates to:
+  /// **'Tuesday'**
+  String get tuesday;
+
+  /// Wednesday day name
+  ///
+  /// In en, this message translates to:
+  /// **'Wednesday'**
+  String get wednesday;
+
+  /// Thursday day name
+  ///
+  /// In en, this message translates to:
+  /// **'Thursday'**
+  String get thursday;
+
+  /// Friday day name
+  ///
+  /// In en, this message translates to:
+  /// **'Friday'**
+  String get friday;
+
+  /// Saturday day name
+  ///
+  /// In en, this message translates to:
+  /// **'Saturday'**
+  String get saturday;
+
+  /// Sunday day name
+  ///
+  /// In en, this message translates to:
+  /// **'Sunday'**
+  String get sunday;
+
+  /// Instruction text for day selection dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Select which days this routine should be active:'**
+  String get selectDaysActive;
+
+  /// Sort option for newest templates
+  ///
+  /// In en, this message translates to:
+  /// **'Newest'**
+  String get newest;
+
+  /// Sort option for most liked templates
+  ///
+  /// In en, this message translates to:
+  /// **'Most Liked'**
+  String get mostLiked;
+
+  /// Sort option for most used templates
+  ///
+  /// In en, this message translates to:
+  /// **'Most Used'**
+  String get mostUsed;
+
+  /// Placeholder text for template search
+  ///
+  /// In en, this message translates to:
+  /// **'Search templates...'**
+  String get searchPlaceholder;
+
+  /// Category filter label
+  ///
+  /// In en, this message translates to:
+  /// **'Category'**
+  String get category;
+
+  /// Lifestyle filter label
+  ///
+  /// In en, this message translates to:
+  /// **'Lifestyle'**
+  String get lifestyle;
+
+  /// Sort filter label
+  ///
+  /// In en, this message translates to:
+  /// **'Sort by'**
+  String get sortBy;
+
+  /// Loading message for templates
+  ///
+  /// In en, this message translates to:
+  /// **'Loading templates...'**
+  String get loadingTemplates;
+
+  /// Message when no templates match filters
+  ///
+  /// In en, this message translates to:
+  /// **'No templates found'**
+  String get noTemplatesFound;
+
+  /// Button to clear all filters
+  ///
+  /// In en, this message translates to:
+  /// **'Clear filters'**
+  String get clearFilters;
+
+  /// Message when no templates exist
+  ///
+  /// In en, this message translates to:
+  /// **'No templates available'**
+  String get noTemplatesAvailable;
+
+  /// Retry button text
+  ///
+  /// In en, this message translates to:
+  /// **'Retry'**
+  String get retry;
+
+  /// Template category display text
+  ///
+  /// In en, this message translates to:
+  /// **'Category: {category}'**
+  String templateCategory(String category);
+
+  /// Template loading error message
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load some templates: {error}'**
+  String failedToLoadTemplates(String error);
+
+  /// All items filter option
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get all;
+
+  /// Color settings menu item
+  ///
+  /// In en, this message translates to:
+  /// **'Color Settings'**
+  String get colorSettings;
+
+  /// Share as template menu item
+  ///
+  /// In en, this message translates to:
+  /// **'Share as Template'**
+  String get shareAsTemplate;
+
+  /// Day settings menu item
+  ///
+  /// In en, this message translates to:
+  /// **'Day Settings'**
+  String get daySettings;
+
+  /// Rename routine dialog title
+  ///
+  /// In en, this message translates to:
+  /// **'Rename Routine'**
+  String get renameRoutineDialog;
+
+  /// Delete routine dialog title
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Routine'**
+  String get deleteRoutineDialog;
+
+  /// Delete confirmation message
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to delete \"{name}\"?'**
+  String deleteConfirmMessage(String name);
+
+  /// Day settings dialog title
+  ///
+  /// In en, this message translates to:
+  /// **'Day Settings for {name}'**
+  String daySettingsFor(String name);
+
+  /// Color chooser dialog title
+  ///
+  /// In en, this message translates to:
+  /// **'Choose Color for {name}'**
+  String chooseColorFor(String name);
+
+  /// Default color option
+  ///
+  /// In en, this message translates to:
+  /// **'Default'**
+  String get defaultColor;
+
+  /// Template name field label
+  ///
+  /// In en, this message translates to:
+  /// **'Template Name'**
+  String get templateName;
+
+  /// Description field label
+  ///
+  /// In en, this message translates to:
+  /// **'Description'**
+  String get description;
+
+  /// Template name field placeholder
+  ///
+  /// In en, this message translates to:
+  /// **'Enter template name...'**
+  String get enterTemplateName;
+
+  /// Template description field placeholder
+  ///
+  /// In en, this message translates to:
+  /// **'Describe this routine...'**
+  String get describeRoutine;
+
+  /// Lifestyle type field label
+  ///
+  /// In en, this message translates to:
+  /// **'Lifestyle Type'**
+  String get lifestyleType;
+
+  /// Template sharing progress message
+  ///
+  /// In en, this message translates to:
+  /// **'Sharing template...'**
+  String get sharingTemplate;
+
+  /// Share button text
+  ///
+  /// In en, this message translates to:
+  /// **'Share'**
+  String get share;
+
+  /// Template name required error message
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a template name'**
+  String get pleaseEnterTemplateName;
+
+  /// Template sharing success message
+  ///
+  /// In en, this message translates to:
+  /// **'Template \"{name}\" shared successfully!'**
+  String templateSharedSuccess(String name);
+
+  /// Template sharing failure message
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to share template. Please try again.'**
+  String get templateShareFailed;
+
+  /// Every day text for routine slots
+  ///
+  /// In en, this message translates to:
+  /// **'Every day'**
+  String get everyDay;
+
+  /// No days selected text for routine slots
+  ///
+  /// In en, this message translates to:
+  /// **'No days selected'**
+  String get noDaysSelected;
+
+  /// Short format for hours
+  ///
+  /// In en, this message translates to:
+  /// **'h'**
+  String get hoursShort;
+
+  /// Short format for minutes
+  ///
+  /// In en, this message translates to:
+  /// **'m'**
+  String get minutesShortFormat;
 }
 
 class _AppLocalizationsDelegate

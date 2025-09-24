@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../utils/logger.dart';
 
 class LanguageService extends ChangeNotifier {
   static const String _languageKey = 'selected_language';
@@ -33,24 +34,24 @@ class LanguageService extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       final languageCode = prefs.getString(_languageKey) ?? 'en';
       _locale = Locale(languageCode);
-      print('Language loaded: $languageCode'); // Debug log
+      Logger.instance.info('Language loaded: $languageCode');
       notifyListeners();
     } catch (e) {
-      print('Error loading saved language: $e');
+      Logger.instance.error('Error loading saved language: $e');
       _locale = const Locale('en'); // Fallback to English
     }
   }
 
   Future<void> changeLanguage(Locale locale) async {
     if (supportedLocales.contains(locale)) {
-      print('Changing language to: ${locale.languageCode}'); // Debug log
+      Logger.instance.info('Changing language to: ${locale.languageCode}');
       _locale = locale;
       try {
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString(_languageKey, locale.languageCode);
-        print('Language saved: ${locale.languageCode}'); // Debug log
+        Logger.instance.info('Language saved: ${locale.languageCode}');
       } catch (e) {
-        print('Error saving language: $e');
+        Logger.instance.error('Error saving language: $e');
       }
       notifyListeners();
     }
@@ -65,9 +66,9 @@ class LanguageService extends ChangeNotifier {
   }
 
   String getCurrentLanguageName() {
-    print('getCurrentLanguageName called, current locale: ${_locale.languageCode}'); // Debug log
+    Logger.instance.debug('getCurrentLanguageName called, current locale: ${_locale.languageCode}');
     final name = getLanguageName(_locale.languageCode);
-    print('Language name returned: $name'); // Debug log
+    Logger.instance.debug('Language name returned: $name');
     return name;
   }
 }

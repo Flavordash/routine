@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -15,9 +16,11 @@ void notificationTapBackground(NotificationResponse response) {
   Logger.instance.info('  - actionId: $actionId');
   Logger.instance.info('  - payload: $payload');
 
-  if (actionId == 'snooze_action' && payload != null) {
-    Logger.instance.info('🔄 Processing snooze action in background...');
-    NotificationService.instance.handleSnoozeAction(payload);
+  if (actionId == 'interval_action' && payload != null) {
+    Logger.instance.info('🔄 Processing Smart Intervals action in background...');
+    NotificationService.instance.handleIntervalAction(payload).catchError((error) {
+      Logger.instance.error('Failed to handle Smart Intervals action in background: $error');
+    });
   } else if (actionId == 'dismiss_action' && payload != null) {
     Logger.instance.info('✖️ Processing dismiss action in background...');
     NotificationService.instance.handleDismissAction(payload);
@@ -62,7 +65,7 @@ class NotificationService {
 
     const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
 
-    // Setup iOS notification categories with snooze actions
+    // Setup iOS notification categories with Smart Intervals actions
     final iosSettings = DarwinInitializationSettings(
       requestAlertPermission: true,
       requestBadgePermission: true,
@@ -73,14 +76,23 @@ class NotificationService {
           'ALARM_CATEGORY',
           actions: [
             DarwinNotificationAction.plain(
-              'snooze_action',
-              'Snooze',
+              'interval_action',
+              'Next Interval',
+              options: <DarwinNotificationActionOption>{
+                DarwinNotificationActionOption.foreground,
+              },
             ),
             DarwinNotificationAction.plain(
               'dismiss_action',
               'Dismiss',
+              options: <DarwinNotificationActionOption>{
+                DarwinNotificationActionOption.destructive,
+              },
             ),
           ],
+          options: <DarwinNotificationCategoryOption>{
+            DarwinNotificationCategoryOption.allowInCarPlay,
+          },
         ),
       ],
     );
@@ -398,30 +410,28 @@ class NotificationService {
     
     final body = isPreAlarm
         ? 'Starting in ${timeSlot.preAlarmMinutes} minutes'
-        : timeSlot.snoozeEnabled
-            ? '${timeSlot.startTime} - ${timeSlot.endTime}\n📱 Hold to snooze or dismiss'
+        : timeSlot.smartIntervalsEnabled && timeSlot.smartIntervalMinutes > 0
+            ? '${timeSlot.startTime} - ${timeSlot.endTime}\n⏱️ Smart Intervals active (${timeSlot.smartIntervalMinutes}min)'
             : '${timeSlot.startTime} - ${timeSlot.endTime}';
 
-    // Create notification actions for snooze functionality
+    // Create notification actions for Smart Intervals functionality
     final List<AndroidNotificationAction> actions = [];
-    if (!isPreAlarm && timeSlot.snoozeEnabled) {
+    if (!isPreAlarm && timeSlot.smartIntervalsEnabled && timeSlot.smartIntervalMinutes > 0) {
       actions.addAll([
         const AndroidNotificationAction(
-          'snooze_action',
-          'Snooze ⏰',
-          icon: DrawableResourceAndroidBitmap('@drawable/ic_snooze'),
+          'interval_action',
+          'Next Interval ⏱️',
           showsUserInterface: true,
         ),
         const AndroidNotificationAction(
           'dismiss_action',
           'Dismiss ✖️',
-          icon: DrawableResourceAndroidBitmap('@drawable/ic_clear'),
           showsUserInterface: false,
         ),
       ]);
-      Logger.instance.info('📱 Added snooze and dismiss actions to notification for "${timeSlot.label}"');
+      Logger.instance.info('📱 Added Smart Intervals and dismiss actions to notification for "${timeSlot.label}"');
     } else {
-      Logger.instance.info('⚠️ No snooze actions added: isPreAlarm=$isPreAlarm, snoozeEnabled=${timeSlot.snoozeEnabled}');
+      Logger.instance.info('⚠️ No Smart Intervals actions added: isPreAlarm=$isPreAlarm, smartIntervalsEnabled=${timeSlot.smartIntervalsEnabled}, intervalMinutes=${timeSlot.smartIntervalMinutes}');
     }
 
     final androidDetails = AndroidNotificationDetails(
@@ -432,8 +442,8 @@ class NotificationService {
       priority: Priority.high,
       enableVibration: true,
       vibrationPattern: isPreAlarm
-          ? Int64List.fromList([0, 500, 200, 500])
-          : Int64List.fromList([0, 1000, 500, 1000]),
+          ? Int64List.fromList([0, 800, 300, 800, 300, 800])
+          : Int64List.fromList([0, 1500, 500, 1500, 500, 1500, 500, 1500]),
       playSound: true,
       actions: actions,
       category: AndroidNotificationCategory.alarm,
@@ -442,7 +452,7 @@ class NotificationService {
       styleInformation: BigTextStyleInformation(
         body,
         contentTitle: title,
-        summaryText: timeSlot.snoozeEnabled && !isPreAlarm ? 'Tap Snooze or Dismiss' : null,
+        summaryText: timeSlot.smartIntervalsEnabled && timeSlot.smartIntervalMinutes > 0 && !isPreAlarm ? 'Tap Next Interval or Dismiss' : null,
       ),
       visibility: NotificationVisibility.public,
       showWhen: true,
@@ -453,7 +463,7 @@ class NotificationService {
       presentAlert: true,
       presentBadge: true,
       presentSound: true,
-      categoryIdentifier: timeSlot.snoozeEnabled && !isPreAlarm ? 'ALARM_CATEGORY' : null,
+      categoryIdentifier: timeSlot.smartIntervalsEnabled && timeSlot.smartIntervalMinutes > 0 && !isPreAlarm ? 'ALARM_CATEGORY' : null,
       interruptionLevel: isPreAlarm
           ? InterruptionLevel.active
           : InterruptionLevel.critical,
@@ -471,7 +481,7 @@ class NotificationService {
         body,
         tz.TZDateTime.from(notificationTime, tz.local),
         platformChannelSpecifics,
-        payload: '${timeSlot.id}|${timeSlot.label}|${timeSlot.snoozeDuration}|${timeSlot.maxSnoozeCount}',
+        payload: '${timeSlot.id}|${timeSlot.label}|${timeSlot.smartIntervalMinutes}|${timeSlot.silentIntervals ? 1 : 0}|${timeSlot.showProgressMessages ? 1 : 0}',
         matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
         uiLocalNotificationDateInterpretation:
             UILocalNotificationDateInterpretation.absoluteTime,
@@ -482,6 +492,15 @@ class NotificationService {
         'on $targetDayName at $hour:${minute.toString().padLeft(2, '0')} '
         '(ID: $notificationId, Date: ${notificationTime.toString().split(' ')[0]})'
       );
+
+      // Schedule Smart Intervals if enabled and this is the main alarm (not pre-alarm)
+      if (!isPreAlarm && timeSlot.smartIntervalsEnabled && timeSlot.smartIntervalMinutes > 0) {
+        await _scheduleSmartIntervals(
+          timeSlot: timeSlot,
+          mainAlarmTime: notificationTime,
+          dayOfWeek: dayOfWeek,
+        );
+      }
     } catch (error) {
       Logger.instance.error(
         'FAILED: Could not schedule ${isPreAlarm ? 'pre-' : ''}notification for "${timeSlot.label}" '
@@ -965,74 +984,82 @@ class NotificationService {
   void _handleNotificationResponse(NotificationResponse response, {required bool isBackground}) {
     final payload = response.payload;
     final actionId = response.actionId;
+    final platform = Platform.isIOS ? 'iOS' : Platform.isAndroid ? 'Android' : 'Unknown';
 
-    Logger.instance.info('🔔 Notification response received (background: $isBackground):');
+    Logger.instance.info('🔔 [$platform/${isBackground ? 'BACKGROUND' : 'FOREGROUND'}] Notification response received:');
     Logger.instance.info('  - actionId: $actionId');
     Logger.instance.info('  - payload: $payload');
     Logger.instance.info('  - notificationResponseType: ${response.notificationResponseType}');
+    Logger.instance.info('  - input: ${response.input}');
+    Logger.instance.info('  - id: ${response.id}');
 
-    if (actionId == 'snooze_action' && payload != null) {
-      Logger.instance.info('🔄 Processing snooze action in ${isBackground ? 'background' : 'foreground'}...');
-      handleSnoozeAction(payload);
+    if (actionId == 'interval_action' && payload != null) {
+      Logger.instance.info('🔄 [$platform] Processing Smart Intervals action in ${isBackground ? 'background' : 'foreground'}...');
+      handleIntervalAction(payload).catchError((error) {
+        Logger.instance.error('❌ [$platform] Failed to handle Smart Intervals action: $error');
+      });
     } else if (actionId == 'dismiss_action' && payload != null) {
-      Logger.instance.info('✖️ Processing dismiss action in ${isBackground ? 'background' : 'foreground'}...');
+      Logger.instance.info('✖️ [$platform] Processing dismiss action in ${isBackground ? 'background' : 'foreground'}...');
       handleDismissAction(payload);
     } else {
-      Logger.instance.info('ℹ️ No matching action found or payload is null');
+      Logger.instance.info('ℹ️ [$platform] No matching action found or payload is null');
+      Logger.instance.info('  - Expected actionId: interval_action or dismiss_action');
+      Logger.instance.info('  - Actual actionId: $actionId');
+      Logger.instance.info('  - Payload available: ${payload != null}');
     }
   }
 
 
-  // Handle snooze action
-  void handleSnoozeAction(String payload) {
+  // Handle Smart Intervals action
+  Future<void> handleIntervalAction(String payload) async {
     try {
-      Logger.instance.info('🔄 Handling snooze action with payload: $payload');
+      Logger.instance.info('⏱️ Handling Smart Intervals action with payload: $payload');
 
-      // Parse payload to extract timeSlot info and current snooze count
+      // Parse payload to extract timeSlot info
       final parts = payload.split('|');
       Logger.instance.info('📝 Payload parts: $parts');
 
-      if (parts.length < 4) {
-        Logger.instance.error('❌ Invalid snooze payload format: $payload (expected at least 4 parts, got ${parts.length})');
+      if (parts.length < 5) {
+        Logger.instance.error('❌ Invalid Smart Intervals payload format: $payload (expected 5 parts, got ${parts.length})');
         return;
       }
 
       final timeSlotId = parts[0];
       final label = parts[1];
-      final snoozeDuration = int.parse(parts[2]);
-      final maxSnoozeCount = int.parse(parts[3]);
-      final currentSnoozeCount = parts.length > 4 ? int.parse(parts[4]) : 0;
+      final intervalMinutes = int.parse(parts[2]);
+      final silentIntervals = parts[3] == '1';
+      final showProgressMessages = parts[4] == '1';
 
-      Logger.instance.info('📊 Snooze parameters:');
+      Logger.instance.info('📊 Smart Intervals parameters:');
       Logger.instance.info('  - timeSlotId: $timeSlotId');
       Logger.instance.info('  - label: $label');
-      Logger.instance.info('  - snoozeDuration: $snoozeDuration minutes');
-      Logger.instance.info('  - maxSnoozeCount: $maxSnoozeCount');
-      Logger.instance.info('  - currentSnoozeCount: $currentSnoozeCount');
+      Logger.instance.info('  - intervalMinutes: $intervalMinutes');
+      Logger.instance.info('  - silentIntervals: $silentIntervals');
+      Logger.instance.info('  - showProgressMessages: $showProgressMessages');
 
-      if (currentSnoozeCount >= maxSnoozeCount) {
-        Logger.instance.info('⚠️ Max snooze count reached for $label ($currentSnoozeCount/$maxSnoozeCount)');
+      if (intervalMinutes <= 0) {
+        Logger.instance.info('⚠️ No interval duration set for $label');
         return;
       }
 
-      final newSnoozeCount = currentSnoozeCount + 1;
-      final snoozeTime = DateTime.now().add(Duration(minutes: snoozeDuration));
+      final nextIntervalTime = DateTime.now().add(Duration(minutes: intervalMinutes));
 
-      Logger.instance.info('⏰ Scheduling snooze notification for: ${snoozeTime.toString()}');
+      Logger.instance.info('⏰ Scheduling next interval notification for: ${nextIntervalTime.toString()}');
 
-      // Schedule snoozed notification
-      _scheduleSnoozeNotification(
+      // Schedule next interval notification
+      await _scheduleIntervalNotification(
         timeSlotId: timeSlotId,
         label: label,
-        snoozeTime: snoozeTime,
-        snoozeDuration: snoozeDuration,
-        maxSnoozeCount: maxSnoozeCount,
-        currentSnoozeCount: newSnoozeCount,
+        intervalTime: nextIntervalTime,
+        intervalMinutes: intervalMinutes,
+        silentIntervals: silentIntervals,
+        showProgressMessages: showProgressMessages,
+        intervalNumber: 1, // This is for manual interval scheduling
       );
 
-      Logger.instance.info('✅ Successfully snoozed "$label" for $snoozeDuration minutes (attempt $newSnoozeCount/$maxSnoozeCount)');
+      Logger.instance.info('✅ Successfully scheduled next interval for "$label" in $intervalMinutes minutes');
     } catch (error) {
-      Logger.instance.error('❌ Failed to handle snooze action: $error');
+      Logger.instance.error('❌ Failed to handle Smart Intervals action: $error');
     }
   }
 
@@ -1042,58 +1069,124 @@ class NotificationService {
     // Notification is automatically dismissed, no further action needed
   }
 
-  // Schedule a snoozed notification
-  Future<void> _scheduleSnoozeNotification({
+  // Schedule multiple Smart Intervals notifications for a time slot
+  Future<void> _scheduleSmartIntervals({
+    required RoutineTimeSlot timeSlot,
+    required DateTime mainAlarmTime,
+    required int dayOfWeek,
+  }) async {
+    try {
+      Logger.instance.info('⏱️ Scheduling Smart Intervals for "${timeSlot.label}"');
+      Logger.instance.info('  - Interval duration: ${timeSlot.smartIntervalMinutes} minutes');
+      Logger.instance.info('  - Silent mode: ${timeSlot.silentIntervals}');
+      Logger.instance.info('  - Progress messages: ${timeSlot.showProgressMessages}');
+
+      // Parse start and end times
+      final startTimeParts = timeSlot.startTime.split(':');
+      final endTimeParts = timeSlot.endTime.split(':');
+      final startHour = int.parse(startTimeParts[0]);
+      final startMinute = int.parse(startTimeParts[1]);
+      final endHour = int.parse(endTimeParts[0]);
+      final endMinute = int.parse(endTimeParts[1]);
+
+      // Calculate the end time of the time slot
+      var endDateTime = DateTime(
+        mainAlarmTime.year,
+        mainAlarmTime.month,
+        mainAlarmTime.day,
+        endHour,
+        endMinute,
+      );
+
+      // Handle next day end time
+      if (endHour < startHour || (endHour == startHour && endMinute < startMinute)) {
+        endDateTime = endDateTime.add(const Duration(days: 1));
+      }
+
+      // Schedule intervals from start time until end time
+      var currentIntervalTime = mainAlarmTime.add(Duration(minutes: timeSlot.smartIntervalMinutes));
+      int intervalCount = 1;
+
+      while (currentIntervalTime.isBefore(endDateTime)) {
+        await _scheduleIntervalNotification(
+          timeSlotId: '${timeSlot.id}_interval_$intervalCount',
+          label: timeSlot.label ?? 'Routine Activity',
+          intervalTime: currentIntervalTime,
+          intervalMinutes: timeSlot.smartIntervalMinutes,
+          silentIntervals: timeSlot.silentIntervals,
+          showProgressMessages: timeSlot.showProgressMessages,
+          intervalNumber: intervalCount,
+        );
+
+        currentIntervalTime = currentIntervalTime.add(Duration(minutes: timeSlot.smartIntervalMinutes));
+        intervalCount++;
+      }
+
+      Logger.instance.info('✅ Scheduled ${intervalCount - 1} Smart Intervals for "${timeSlot.label}"');
+    } catch (error) {
+      Logger.instance.error('❌ Failed to schedule Smart Intervals for "${timeSlot.label}": $error');
+    }
+  }
+
+  // Schedule a Smart Intervals notification
+  Future<void> _scheduleIntervalNotification({
     required String timeSlotId,
     required String label,
-    required DateTime snoozeTime,
-    required int snoozeDuration,
-    required int maxSnoozeCount,
-    required int currentSnoozeCount,
+    required DateTime intervalTime,
+    required int intervalMinutes,
+    required bool silentIntervals,
+    required bool showProgressMessages,
+    required int intervalNumber,
   }) async {
-    final notificationId = timeSlotId.hashCode.abs() + 50000 + currentSnoozeCount;
+    // Generate unique notification ID for interval (using interval number to avoid conflicts)
+    final notificationId = timeSlotId.hashCode.abs() + 60000 + (intervalNumber * 100);
 
-    final payload = '$timeSlotId|$label|$snoozeDuration|$maxSnoozeCount|$currentSnoozeCount';
+    final payload = '$timeSlotId|$label|$intervalMinutes|${silentIntervals ? 1 : 0}|${showProgressMessages ? 1 : 0}';
 
-    final title = 'Snoozed: $label';
-    final body = 'Snooze attempt $currentSnoozeCount/$maxSnoozeCount';
+    final title = showProgressMessages ? 'Interval #$intervalNumber: $label' : label;
+    final body = showProgressMessages
+        ? 'Interval #$intervalNumber - Next in $intervalMinutes minutes'
+        : 'Smart Interval #$intervalNumber reminder';
 
-    // Create snooze actions (if not max attempts)
-    final List<AndroidNotificationAction> actions = [];
-    if (currentSnoozeCount < maxSnoozeCount) {
-      actions.addAll([
-        const AndroidNotificationAction(
-          'snooze_action',
-          'Snooze',
-        ),
-        const AndroidNotificationAction(
-          'dismiss_action',
-          'Dismiss',
-        ),
-      ]);
-    }
+    // Create Smart Intervals actions
+    final List<AndroidNotificationAction> actions = [
+      const AndroidNotificationAction(
+        'interval_action',
+        'Next Interval ⏱️',
+        showsUserInterface: true,
+      ),
+      const AndroidNotificationAction(
+        'dismiss_action',
+        'Dismiss ✖️',
+        showsUserInterface: false,
+      ),
+    ];
 
     final androidDetails = AndroidNotificationDetails(
-      'routine_notifications',
-      'Routine Notifications',
-      channelDescription: 'Snoozed notifications for your scheduled time slots',
-      importance: Importance.max,
-      priority: Priority.high,
+      'routine_intervals',
+      'Smart Intervals',
+      channelDescription: 'Smart Intervals notifications for your time slots',
+      importance: silentIntervals ? Importance.low : Importance.max,
+      priority: silentIntervals ? Priority.low : Priority.high,
       enableVibration: true,
-      vibrationPattern: Int64List.fromList([0, 1000, 500, 1000]),
-      playSound: true,
+      vibrationPattern: silentIntervals
+          ? Int64List.fromList([0, 400, 200, 400]) // Longer vibration for silent intervals
+          : Int64List.fromList([0, 1200, 400, 1200, 400, 1200]), // More intense pattern
+      playSound: !silentIntervals,
       actions: actions,
-      category: AndroidNotificationCategory.alarm,
-      fullScreenIntent: true,
-      additionalFlags: Int32List.fromList([4]), // FLAG_INSISTENT
+      category: AndroidNotificationCategory.reminder,
+      fullScreenIntent: !silentIntervals,
+      additionalFlags: silentIntervals ? null : Int32List.fromList([4]), // FLAG_INSISTENT only for non-silent
     );
 
     final iosDetails = DarwinNotificationDetails(
       presentAlert: true,
       presentBadge: true,
-      presentSound: true,
-      categoryIdentifier: currentSnoozeCount < maxSnoozeCount ? 'ALARM_CATEGORY' : null,
-      interruptionLevel: InterruptionLevel.critical,
+      presentSound: !silentIntervals,
+      categoryIdentifier: 'ALARM_CATEGORY',
+      interruptionLevel: silentIntervals
+          ? InterruptionLevel.passive
+          : InterruptionLevel.active,
     );
 
     final platformChannelSpecifics = NotificationDetails(
@@ -1106,17 +1199,275 @@ class NotificationService {
         notificationId,
         title,
         body,
-        tz.TZDateTime.from(snoozeTime, tz.local),
+        tz.TZDateTime.from(intervalTime, tz.local),
         platformChannelSpecifics,
         payload: payload,
         uiLocalNotificationDateInterpretation:
             UILocalNotificationDateInterpretation.absoluteTime,
       );
 
-      Logger.instance.info('Scheduled snooze notification for "$label" at $snoozeTime (ID: $notificationId)');
+      Logger.instance.info('✅ Scheduled Smart Intervals notification #$intervalNumber for "$label"');
+      Logger.instance.info('  - Time: ${intervalTime.toString()}');
+      Logger.instance.info('  - ID: $notificationId');
+      Logger.instance.info('  - Silent: $silentIntervals');
+      Logger.instance.info('  - Progress messages: $showProgressMessages');
     } catch (error) {
-      Logger.instance.error('Failed to schedule snooze notification: $error');
+      Logger.instance.error('Failed to schedule Smart Intervals notification: $error');
     }
+  }
+
+  /// Test Smart Intervals functionality with short intervals
+  Future<void> testSmartIntervals() async {
+    Logger.instance.info('🧪 === SMART INTERVALS TEST ===');
+
+    // Create a test time slot with Smart Intervals enabled
+    final now = DateTime.now();
+    final startTime = now.add(const Duration(minutes: 1)); // Start in 1 minute
+    final endTime = now.add(const Duration(minutes: 10)); // End in 10 minutes (9-minute duration)
+
+    final testTimeSlot = RoutineTimeSlot(
+      id: 'test_smart_intervals',
+      startAngle: 90,
+      endAngle: 120,
+      startTime: '${startTime.hour.toString().padLeft(2, '0')}:${startTime.minute.toString().padLeft(2, '0')}',
+      endTime: '${endTime.hour.toString().padLeft(2, '0')}:${endTime.minute.toString().padLeft(2, '0')}',
+      label: 'Smart Intervals Test',
+      hasAlarm: true,
+      hasPreAlarm: false,
+      smartIntervalsEnabled: true,
+      smartIntervalMinutes: 2, // 2 minute intervals for quick testing
+      silentIntervals: false,
+      showProgressMessages: true,
+    );
+
+    final testRoutineSlot = RoutineSlot(
+      id: 'test_smart_intervals_routine',
+      name: 'Smart Intervals Test Routine',
+      isActive: true,
+      isPaid: true,
+      timeSlots: [testTimeSlot],
+      selectedDays: [DateTime.now().weekday], // Today only
+    );
+
+    Logger.instance.info('📝 Smart Intervals Test Configuration:');
+    Logger.instance.info('  - Start time: ${testTimeSlot.startTime}');
+    Logger.instance.info('  - End time: ${testTimeSlot.endTime}');
+    Logger.instance.info('  - Duration: 9 minutes');
+    Logger.instance.info('  - Interval: ${testTimeSlot.smartIntervalMinutes} minutes');
+    Logger.instance.info('  - Expected intervals: 4 (at minutes 3, 5, 7, 9)');
+    Logger.instance.info('  - Day: ${DateTime.now().weekday} (today)');
+
+    try {
+      // Schedule the test alarm and intervals
+      await scheduleActiveRoutineNotifications([testRoutineSlot]);
+
+      Logger.instance.info('✅ Smart Intervals test scheduled successfully!');
+      Logger.instance.info('📱 You should receive:');
+      Logger.instance.info('  1. Main alarm in ~1 minute');
+      Logger.instance.info('  2. Interval #1 in ~3 minutes');
+      Logger.instance.info('  3. Interval #2 in ~5 minutes');
+      Logger.instance.info('  4. Interval #3 in ~7 minutes');
+      Logger.instance.info('  5. Interval #4 in ~9 minutes');
+      Logger.instance.info('📋 Each interval notification should have "Next Interval" and "Dismiss" buttons');
+
+    } catch (error) {
+      Logger.instance.error('❌ Failed to schedule Smart Intervals test: $error');
+    }
+  }
+
+  /// Create a comprehensive test routine slot with PRO alarm features
+  Future<void> testProAlarmFunctionality() async {
+    Logger.instance.info('🧪 === COMPREHENSIVE PRO ALARM TEST ===');
+
+    // Create test routine slot with PRO alarm features
+    final testTimeSlot = RoutineTimeSlot(
+      id: 'test_pro_alarm',
+      startAngle: 90,
+      endAngle: 120,
+      startTime: '${DateTime.now().add(Duration(minutes: 1)).hour.toString().padLeft(2, '0')}:${DateTime.now().add(Duration(minutes: 1)).minute.toString().padLeft(2, '0')}',
+      endTime: '${DateTime.now().add(Duration(minutes: 2)).hour.toString().padLeft(2, '0')}:${DateTime.now().add(Duration(minutes: 2)).minute.toString().padLeft(2, '0')}',
+      label: 'PRO Alarm Test',
+      hasAlarm: true,
+      hasPreAlarm: true,
+      preAlarmMinutes: 1, // 1 minute before main alarm
+      smartIntervalsEnabled: true,
+      smartIntervalMinutes: 1, // 1 minute intervals for quick testing
+      silentIntervals: false,
+      showProgressMessages: true,
+    );
+
+    final testRoutineSlot = RoutineSlot(
+      id: 'test_pro_routine',
+      name: 'PRO Alarm Test Routine',
+      isActive: true,
+      isPaid: true,
+      timeSlots: [testTimeSlot],
+      selectedDays: [DateTime.now().weekday], // Today only
+    );
+
+    Logger.instance.info('📝 Test Configuration:');
+    Logger.instance.info('  - Main alarm time: ${testTimeSlot.startTime}');
+    Logger.instance.info('  - Pre-alarm: ${testTimeSlot.preAlarmMinutes} minutes before');
+    Logger.instance.info('  - Smart Intervals: ${testTimeSlot.smartIntervalMinutes} minutes, silent: ${testTimeSlot.silentIntervals}');
+    Logger.instance.info('  - Day: ${DateTime.now().weekday} (today)');
+
+    try {
+      // Schedule the test alarm
+      await scheduleActiveRoutineNotifications([testRoutineSlot]);
+
+      Logger.instance.info('✅ PRO alarm test scheduled successfully!');
+      Logger.instance.info('📅 Expected timeline:');
+      Logger.instance.info('  - Pre-alarm: ${DateTime.now().add(Duration(minutes: 0)).toString().split('.')[0]}');
+      Logger.instance.info('  - Main alarm: ${DateTime.now().add(Duration(minutes: 1)).toString().split('.')[0]}');
+
+      Logger.instance.info('⏰ Watch for notifications in the next 2 minutes');
+      Logger.instance.info('📱 When notifications appear, test the snooze functionality');
+
+    } catch (error) {
+      Logger.instance.error('❌ Failed to schedule PRO alarm test: $error');
+    }
+
+    Logger.instance.info('🧪 === END PRO ALARM TEST ===');
+  }
+
+  /// Quick test for immediate PRO alarm with all features
+  Future<void> testProAlarmImmediate() async {
+    Logger.instance.info('🚀 === IMMEDIATE PRO ALARM TEST ===');
+
+    try {
+      // Schedule a notification 5 seconds from now with PRO features
+      final testTime = DateTime.now().add(Duration(seconds: 5));
+
+      await scheduleTestNotification(
+        time: testTime,
+        title: 'PRO Alarm Test - 5s',
+        body: 'This is a test of PRO alarm features. Try the Snooze button!',
+      );
+
+      Logger.instance.info('✅ Immediate PRO alarm test scheduled for 5 seconds from now');
+      Logger.instance.info('📱 Expected at: ${testTime.toString().split('.')[0]}');
+      Logger.instance.info('🔔 This notification will have Snooze and Dismiss buttons');
+
+    } catch (error) {
+      Logger.instance.error('❌ Failed to schedule immediate PRO alarm test: $error');
+    }
+
+    Logger.instance.info('🚀 === END IMMEDIATE TEST ===');
+  }
+
+  /// Test iOS-specific snooze functionality
+  Future<void> testIOSSnooze() async {
+    Logger.instance.info('🍎 === iOS SNOOZE TEST ===');
+
+    if (!Platform.isIOS) {
+      Logger.instance.info('⚠️ This test is for iOS only. Current platform: ${Platform.operatingSystem}');
+      return;
+    }
+
+    try {
+      const iosDetails = DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+        categoryIdentifier: 'ALARM_CATEGORY',
+        interruptionLevel: InterruptionLevel.critical,
+      );
+
+      const platformChannelSpecifics = NotificationDetails(
+        iOS: iosDetails,
+      );
+
+      await _notificationsPlugin.show(
+        997, // Unique ID for iOS snooze test
+        'iOS Snooze Test',
+        'Tap Snooze to test iOS notification actions. Check logs for detailed debugging.',
+        platformChannelSpecifics,
+        payload: 'ios_test|iOS Snooze Test|1|2|0', // 1min snooze, max 2 attempts
+      );
+
+      Logger.instance.info('✅ iOS snooze test notification sent');
+      Logger.instance.info('🔔 Category: ALARM_CATEGORY');
+      Logger.instance.info('📋 Expected actions: Snooze, Dismiss');
+      Logger.instance.info('⚠️ If actions don\'t appear, check iOS notification settings');
+
+    } catch (error) {
+      Logger.instance.error('❌ Failed to send iOS snooze test: $error');
+    }
+
+    Logger.instance.info('🍎 === END iOS TEST ===');
+  }
+
+  /// Test snooze functionality specifically
+  Future<void> testSnoozeOnly() async {
+    Logger.instance.info('🔔 === SNOOZE-FOCUSED TEST ===');
+
+    try {
+      const androidDetails = AndroidNotificationDetails(
+        'test_notifications',
+        'Test Notifications',
+        channelDescription: 'Test snooze functionality',
+        importance: Importance.max,
+        priority: Priority.high,
+        enableVibration: true,
+        playSound: true,
+        actions: [
+          AndroidNotificationAction(
+            'snooze_action',
+            'Snooze (2min)',
+            showsUserInterface: true,
+          ),
+          AndroidNotificationAction(
+            'dismiss_action',
+            'Dismiss',
+            showsUserInterface: false,
+          ),
+        ],
+        category: AndroidNotificationCategory.alarm,
+        fullScreenIntent: true,
+        styleInformation: BigTextStyleInformation(
+          'Tap SNOOZE to test snooze functionality. It should reschedule for 2 minutes later.',
+          contentTitle: 'Snooze Test - Tap Snooze!',
+          summaryText: 'Test: snooze → wait 2min → repeat',
+        ),
+        visibility: NotificationVisibility.public,
+        ongoing: true,
+        showWhen: true,
+      );
+
+      const iosDetails = DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+        categoryIdentifier: 'ALARM_CATEGORY',
+        interruptionLevel: InterruptionLevel.critical,
+      );
+
+      const platformChannelSpecifics = NotificationDetails(
+        android: androidDetails,
+        iOS: iosDetails,
+      );
+
+      await _notificationsPlugin.show(
+        996, // Unique ID for snooze test
+        'Snooze Test - Tap Snooze!',
+        'Tap SNOOZE to test snooze functionality. It should reschedule for 2 minutes later.',
+        platformChannelSpecifics,
+        payload: 'snooze_test|Snooze Test|2|3|0', // 2min snooze, max 3 attempts, current count 0
+      );
+
+      Logger.instance.info('✅ Snooze test notification sent with actions');
+      Logger.instance.info('🔔 Payload: snooze_test|Snooze Test|2|3|0');
+      Logger.instance.info('📋 Test steps:');
+      Logger.instance.info('  1. Tap "Snooze (2min)" button on the notification');
+      Logger.instance.info('  2. Wait 2 minutes for snoozed notification');
+      Logger.instance.info('  3. Check if snooze count increments correctly');
+      Logger.instance.info('  4. Test max snooze limit (3 attempts)');
+
+    } catch (error) {
+      Logger.instance.error('❌ Failed to send snooze test notification: $error');
+    }
+
+    Logger.instance.info('🔔 === END SNOOZE TEST ===');
   }
 
 }

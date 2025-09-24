@@ -94,9 +94,10 @@ class RoutineTimeSlot {
   final bool hasAlarm;
   final bool hasPreAlarm;
   final int preAlarmMinutes; // Minutes before main alarm
-  final bool snoozeEnabled;
-  final int snoozeDuration; // Minutes for snooze
-  final int maxSnoozeCount; // Maximum snooze attempts
+  final bool smartIntervalsEnabled;
+  final int smartIntervalMinutes; // Interval duration in minutes (0=None, 5, 10, 15, 30)
+  final bool silentIntervals; // Vibration only
+  final bool showProgressMessages; // Show progress in notifications
   final DateTime? createdAt;
 
   RoutineTimeSlot({
@@ -111,9 +112,10 @@ class RoutineTimeSlot {
     this.hasAlarm = false,
     this.hasPreAlarm = false,
     this.preAlarmMinutes = 15,
-    this.snoozeEnabled = true,
-    this.snoozeDuration = 10,
-    this.maxSnoozeCount = 3,
+    this.smartIntervalsEnabled = false,
+    this.smartIntervalMinutes = 0, // 0 = None (default)
+    this.silentIntervals = false,
+    this.showProgressMessages = true,
     this.createdAt,
   });
 
@@ -129,9 +131,10 @@ class RoutineTimeSlot {
     bool? hasAlarm,
     bool? hasPreAlarm,
     int? preAlarmMinutes,
-    bool? snoozeEnabled,
-    int? snoozeDuration,
-    int? maxSnoozeCount,
+    bool? smartIntervalsEnabled,
+    int? smartIntervalMinutes,
+    bool? silentIntervals,
+    bool? showProgressMessages,
     DateTime? createdAt,
   }) {
     return RoutineTimeSlot(
@@ -146,9 +149,10 @@ class RoutineTimeSlot {
       hasAlarm: hasAlarm ?? this.hasAlarm,
       hasPreAlarm: hasPreAlarm ?? this.hasPreAlarm,
       preAlarmMinutes: preAlarmMinutes ?? this.preAlarmMinutes,
-      snoozeEnabled: snoozeEnabled ?? this.snoozeEnabled,
-      snoozeDuration: snoozeDuration ?? this.snoozeDuration,
-      maxSnoozeCount: maxSnoozeCount ?? this.maxSnoozeCount,
+      smartIntervalsEnabled: smartIntervalsEnabled ?? this.smartIntervalsEnabled,
+      smartIntervalMinutes: smartIntervalMinutes ?? this.smartIntervalMinutes,
+      silentIntervals: silentIntervals ?? this.silentIntervals,
+      showProgressMessages: showProgressMessages ?? this.showProgressMessages,
       createdAt: createdAt ?? this.createdAt,
     );
   }
@@ -166,9 +170,10 @@ class RoutineTimeSlot {
       'hasAlarm': hasAlarm,
       'hasPreAlarm': hasPreAlarm,
       'preAlarmMinutes': preAlarmMinutes,
-      'snoozeEnabled': snoozeEnabled,
-      'snoozeDuration': snoozeDuration,
-      'maxSnoozeCount': maxSnoozeCount,
+      'smartIntervalsEnabled': smartIntervalsEnabled,
+      'smartIntervalMinutes': smartIntervalMinutes,
+      'silentIntervals': silentIntervals,
+      'showProgressMessages': showProgressMessages,
       'createdAt': createdAt?.millisecondsSinceEpoch,
     };
   }
@@ -186,9 +191,10 @@ class RoutineTimeSlot {
       hasAlarm: json['hasAlarm'] ?? false,
       hasPreAlarm: json['hasPreAlarm'] ?? false,
       preAlarmMinutes: json['preAlarmMinutes'] ?? 15,
-      snoozeEnabled: json['snoozeEnabled'] ?? true,
-      snoozeDuration: json['snoozeDuration'] ?? 10,
-      maxSnoozeCount: json['maxSnoozeCount'] ?? 3,
+      smartIntervalsEnabled: json['smartIntervalsEnabled'] ?? false,
+      smartIntervalMinutes: json['smartIntervalMinutes'] ?? 0,
+      silentIntervals: json['silentIntervals'] ?? false,
+      showProgressMessages: json['showProgressMessages'] ?? true,
       createdAt: json['createdAt'] != null
           ? DateTime.fromMillisecondsSinceEpoch(json['createdAt'])
           : null,

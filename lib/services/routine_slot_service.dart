@@ -310,9 +310,10 @@ class RoutineSlotService {
           hasAlarm: (slotData['hasAlarm'] as bool?) ?? false,
           hasPreAlarm: (slotData['hasPreAlarm'] as bool?) ?? false,
           preAlarmMinutes: (slotData['preAlarmMinutes'] as int?) ?? 15,
-          snoozeEnabled: (slotData['snoozeEnabled'] as bool?) ?? true,
-          snoozeDuration: (slotData['snoozeDuration'] as int?) ?? 10,
-          maxSnoozeCount: (slotData['maxSnoozeCount'] as int?) ?? 3,
+          smartIntervalsEnabled: (slotData['smartIntervalsEnabled'] as bool?) ?? false,
+          smartIntervalMinutes: (slotData['smartIntervalMinutes'] as int?) ?? 0,
+          silentIntervals: (slotData['silentIntervals'] as bool?) ?? false,
+          showProgressMessages: (slotData['showProgressMessages'] as bool?) ?? true,
           createdAt: DateTime.now(),
         );
       }).toList();

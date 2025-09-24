@@ -472,7 +472,7 @@
   "@shareTemplates": {
     "description": "Pro feature: share templates to community"
   },
-  "advancedAlarmFeatures": "• Advanced alarm features with pre-alarm and snooze",
+  "advancedAlarmFeatures": "• Advanced alarm features with pre-alarm and Smart Intervals",
   "@advancedAlarmFeatures": {
     "description": "Pro feature: advanced alarm features"
   },
@@ -527,5 +527,318 @@
   "notificationPermissionDenied": "Please enable notifications in your device settings to receive alarms.",
   "@notificationPermissionDenied": {
     "description": "Message when notification permissions are denied"
+  },
+  "preAlarm": "Pre-Alarm",
+  "@preAlarm": {
+    "description": "PRO feature: Pre-alarm setting label"
+  },
+  "preAlarmTime": "Pre-alarm time:",
+  "@preAlarmTime": {
+    "description": "PRO feature: Pre-alarm time setting label"
+  },
+  "smartIntervals": "Smart Intervals",
+  "@smartIntervals": {
+    "description": "PRO feature: Smart Intervals setting label"
+  },
+  "intervalDuration": "Interval Duration:",
+  "@intervalDuration": {
+    "description": "PRO feature: Smart Intervals duration setting label"
+  },
+  "silentIntervals": "Silent Intervals",
+  "@silentIntervals": {
+    "description": "PRO feature: Silent intervals setting label"
+  },
+  "progressMessages": "Progress Messages",
+  "@progressMessages": {
+    "description": "PRO feature: Progress messages setting label"
+  },
+  "minutesShort": "{minutes} min",
+  "@minutesShort": {
+    "description": "Short format for minutes",
+    "placeholders": {
+      "minutes": {
+        "type": "int",
+        "example": "5"
+      }
+    }
+  },
+  "timesCount": "{count} times",
+  "@timesCount": {
+    "description": "Count format for attempts",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "3"
+      }
+    }
+  },
+  "advancedAlarmPromoText": "Get advanced alarm features with pre-alarm warnings and Smart Intervals functionality.",
+  "@advancedAlarmPromoText": {
+    "description": "PRO upgrade promotion text for advanced alarm features"
+  },
+  "fillFreeTime": "Fill Free Time",
+  "@fillFreeTime": {
+    "description": "Button text to fill empty time slots with free time"
+  },
+  "browseTemplates": "Browse Templates",
+  "@browseTemplates": {
+    "description": "Button text to browse template gallery"
+  },
+  "filledFreeTime": "Filled 24-hour period with Free Time!",
+  "@filledFreeTime": {
+    "description": "Success message when filling free time"
+  },
+  "noFreeTimeGaps": "No free time gaps found to fill",
+  "@noFreeTimeGaps": {
+    "description": "Message when no gaps available to fill"
+  },
+  "purchaseSuccessful": "Purchase successful! You now have PRO access.",
+  "@purchaseSuccessful": {
+    "description": "Purchase success message"
+  },
+  "purchaseFailed": "Purchase failed: {error}",
+  "@purchaseFailed": {
+    "description": "Purchase failure message",
+    "placeholders": {
+      "error": {
+        "type": "String",
+        "example": "Network error"
+      }
+    }
+  },
+  "purchasesRestored": "Purchases restored successfully!",
+  "@purchasesRestored": {
+    "description": "Purchase restoration success message"
+  },
+  "restoreFailed": "Restore failed: {error}",
+  "@restoreFailed": {
+    "description": "Purchase restoration failure message",
+    "placeholders": {
+      "error": {
+        "type": "String",
+        "example": "Network error"
+      }
+    }
+  },
+  "monday": "Monday",
+  "@monday": {
+    "description": "Monday day name"
+  },
+  "tuesday": "Tuesday",
+  "@tuesday": {
+    "description": "Tuesday day name"
+  },
+  "wednesday": "Wednesday",
+  "@wednesday": {
+    "description": "Wednesday day name"
+  },
+  "thursday": "Thursday",
+  "@thursday": {
+    "description": "Thursday day name"
+  },
+  "friday": "Friday",
+  "@friday": {
+    "description": "Friday day name"
+  },
+  "saturday": "Saturday",
+  "@saturday": {
+    "description": "Saturday day name"
+  },
+  "sunday": "Sunday",
+  "@sunday": {
+    "description": "Sunday day name"
+  },
+  "selectDaysActive": "Select which days this routine should be active:",
+  "@selectDaysActive": {
+    "description": "Instruction text for day selection dialog"
+  },
+  "newest": "Newest",
+  "@newest": {
+    "description": "Sort option for newest templates"
+  },
+  "mostLiked": "Most Liked",
+  "@mostLiked": {
+    "description": "Sort option for most liked templates"
+  },
+  "mostUsed": "Most Used",
+  "@mostUsed": {
+    "description": "Sort option for most used templates"
+  },
+  "searchPlaceholder": "Search templates...",
+  "@searchPlaceholder": {
+    "description": "Placeholder text for template search"
+  },
+  "category": "Category",
+  "@category": {
+    "description": "Category filter label"
+  },
+  "lifestyle": "Lifestyle",
+  "@lifestyle": {
+    "description": "Lifestyle filter label"
+  },
+  "sortBy": "Sort by",
+  "@sortBy": {
+    "description": "Sort filter label"
+  },
+  "loadingTemplates": "Loading templates...",
+  "@loadingTemplates": {
+    "description": "Loading message for templates"
+  },
+  "noTemplatesFound": "No templates found",
+  "@noTemplatesFound": {
+    "description": "Message when no templates match filters"
+  },
+  "clearFilters": "Clear filters",
+  "@clearFilters": {
+    "description": "Button to clear all filters"
+  },
+  "noTemplatesAvailable": "No templates available",
+  "@noTemplatesAvailable": {
+    "description": "Message when no templates exist"
+  },
+  "retry": "Retry",
+  "@retry": {
+    "description": "Retry button text"
+  },
+  "templateCategory": "Category: {category}",
+  "@templateCategory": {
+    "description": "Template category display text",
+    "placeholders": {
+      "category": {
+        "type": "String",
+        "example": "Work"
+      }
+    }
+  },
+  "failedToLoadTemplates": "Failed to load some templates: {error}",
+  "@failedToLoadTemplates": {
+    "description": "Template loading error message",
+    "placeholders": {
+      "error": {
+        "type": "String",
+        "example": "Network error"
+      }
+    }
+  },
+  "all": "All",
+  "@all": {
+    "description": "All items filter option"
+  },
+
+  "colorSettings": "Color Settings",
+  "@colorSettings": {
+    "description": "Color settings menu item"
+  },
+  "shareAsTemplate": "Share as Template",
+  "@shareAsTemplate": {
+    "description": "Share as template menu item"
+  },
+  "daySettings": "Day Settings",
+  "@daySettings": {
+    "description": "Day settings menu item"
+  },
+  "renameRoutineDialog": "Rename Routine",
+  "@renameRoutineDialog": {
+    "description": "Rename routine dialog title"
+  },
+  "deleteRoutineDialog": "Delete Routine",
+  "@deleteRoutineDialog": {
+    "description": "Delete routine dialog title"
+  },
+  "deleteConfirmMessage": "Are you sure you want to delete \"{name}\"?",
+  "@deleteConfirmMessage": {
+    "description": "Delete confirmation message",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Morning Routine"
+      }
+    }
+  },
+  "daySettingsFor": "Day Settings for {name}",
+  "@daySettingsFor": {
+    "description": "Day settings dialog title",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Morning Routine"
+      }
+    }
+  },
+  "chooseColorFor": "Choose Color for {name}",
+  "@chooseColorFor": {
+    "description": "Color chooser dialog title",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Morning Routine"
+      }
+    }
+  },
+  "defaultColor": "Default",
+  "@defaultColor": {
+    "description": "Default color option"
+  },
+  "templateName": "Template Name",
+  "@templateName": {
+    "description": "Template name field label"
+  },
+  "description": "Description",
+  "@description": {
+    "description": "Description field label"
+  },
+  "enterTemplateName": "Enter template name...",
+  "@enterTemplateName": {
+    "description": "Template name field placeholder"
+  },
+  "describeRoutine": "Describe this routine...",
+  "@describeRoutine": {
+    "description": "Template description field placeholder"
+  },
+  "lifestyleType": "Lifestyle Type",
+  "@lifestyleType": {
+    "description": "Lifestyle type field label"
+  },
+  "sharingTemplate": "Sharing template...",
+  "@sharingTemplate": {
+    "description": "Template sharing progress message"
+  },
+  "share": "Share",
+  "@share": {
+    "description": "Share button text"
+  },
+  "pleaseEnterTemplateName": "Please enter a template name",
+  "@pleaseEnterTemplateName": {
+    "description": "Template name required error message"
+  },
+  "templateSharedSuccess": "Template \"{name}\" shared successfully!",
+  "@templateSharedSuccess": {
+    "description": "Template sharing success message",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Morning Routine"
+      }
+    }
+  },
+  "templateShareFailed": "Failed to share template. Please try again.",
+  "@templateShareFailed": {
+    "description": "Template sharing failure message"
+  },
+  "everyDay": "Every day",
+  "@everyDay": {
+    "description": "Every day text for routine slots"
+  },
+  "noDaysSelected": "No days selected",
+  "@noDaysSelected": {
+    "description": "No days selected text for routine slots"
+  },
+  "hoursShort": "h",
+  "@hoursShort": {
+    "description": "Short format for hours"
+  },
+  "minutesShortFormat": "m",
+  "@minutesShortFormat": {
+    "description": "Short format for minutes"
   }
 }

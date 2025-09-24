@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -22,12 +23,26 @@ import 'widgets/common/error_boundary.dart';
 import 'utils/error_handler.dart';
 import 'utils/lazy_loader.dart';
 import 'services/notification_service.dart';
-import 'widgets/splash/image_splash_screen.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
+import 'utils/logger.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Set up global error handling
+  FlutterError.onError = (FlutterErrorDetails details) {
+    Logger.instance.error('Flutter error: ${details.exception}');
+    Logger.instance.error('Stack trace: ${details.stack}');
+    // In production, you would report this to crash analytics
+  };
+
+  // Handle errors outside of Flutter framework
+  PlatformDispatcher.instance.onError = (error, stack) {
+    Logger.instance.error('Platform error: $error');
+    Logger.instance.error('Stack trace: $stack');
+    return true; // Prevents the error from crashing the app
+  };
 
   // Initialize timezone data for notifications
   tz.initializeTimeZones();
@@ -78,7 +93,6 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> {
   bool isDarkMode = true;
   bool isInitializing = true;
-  bool showSplashScreen = true;
   final LanguageService languageService = LanguageService();
 
   @override
@@ -88,11 +102,9 @@ class _MyAppState extends State<MyApp> {
   }
 
   void _initializeLanguage() async {
-    print('Initializing language...'); // Debug log
+    Logger.instance.info('Initializing language...');
     await languageService.loadSavedLanguage();
-    print(
-      'Language loaded, current locale: ${languageService.locale}',
-    ); // Debug log
+    Logger.instance.info('Language loaded, current locale: ${languageService.locale}');
     languageService.addListener(_onLanguageChanged);
     if (mounted) {
       setState(() {
@@ -104,9 +116,7 @@ class _MyAppState extends State<MyApp> {
   void _onLanguageChanged() {
     if (mounted) {
       setState(() {
-        print(
-          'Language changed, rebuilding app with locale: ${languageService.locale}',
-        );
+        Logger.instance.info('Language changed, rebuilding app with locale: ${languageService.locale}');
       });
     }
   }
@@ -118,16 +128,16 @@ class _MyAppState extends State<MyApp> {
   }
 
   void toggleTheme() {
-    print('Theme toggle called - current isDarkMode: $isDarkMode');
+    Logger.instance.info('Theme toggle called - current isDarkMode: $isDarkMode');
     setState(() {
       isDarkMode = !isDarkMode;
     });
-    print('Theme toggle completed - new isDarkMode: $isDarkMode');
+    Logger.instance.info('Theme toggle completed - new isDarkMode: $isDarkMode');
   }
 
   @override
   Widget build(BuildContext context) {
-    print('App rebuilding with locale: ${languageService.locale}'); // Debug log
+    Logger.instance.debug('App rebuilding with locale: ${languageService.locale}');
     
     if (isInitializing) {
       return MaterialApp(
@@ -156,28 +166,18 @@ class _MyAppState extends State<MyApp> {
           GlobalCupertinoLocalizations.delegate,
         ],
         supportedLocales: languageService.supportedLocales,
-        home: showSplashScreen
-            ? ImageSplashScreen(
-                onSplashComplete: () {
-                  setState(() {
-                    showSplashScreen = false;
-                  });
-                },
-                splashDuration: const Duration(milliseconds: 1500),
-                backgroundColor: isDarkMode ? const Color(0xFF2D2C46) : Colors.white,
-              )
-            : ErrorBoundary(
-                errorMessage: 'Unable to load the main screen',
-                onRetry: () {
-                  setState(() {});
-                },
-                child: MyHomePage(
-                  title: '24-Hour Clock Selector',
-                  isDarkMode: isDarkMode,
-                  onThemeToggle: toggleTheme,
-                  languageService: languageService,
-                ),
-              ),
+        home: ErrorBoundary(
+          errorMessage: 'Unable to load the main screen',
+          onRetry: () {
+            setState(() {});
+          },
+          child: MyHomePage(
+            title: '24-Hour Clock Selector',
+            isDarkMode: isDarkMode,
+            onThemeToggle: toggleTheme,
+            languageService: languageService,
+          ),
+        ),
       ),
     );
   }
@@ -299,9 +299,7 @@ class _MyHomePageState extends State<MyHomePage>
 
   void _setupAuthStateListener() {
     _authStateSubscription = _authService.authStateChanges.listen((User? user) {
-      print(
-        'Auth state changed - User: ${user?.email}, Current Pro status: $isProUser',
-      );
+      Logger.instance.info('Auth state changed - User: ${user?.email}, Current Pro status: $isProUser');
 
       if (mounted) {
         setState(() {
@@ -310,7 +308,7 @@ class _MyHomePageState extends State<MyHomePage>
             isProUser = false;
             routineSlots = [];
             activeSlot = null;
-            print('User logged out - Pro status reset to false');
+            Logger.instance.info('User logged out - Pro status reset to false');
           }
         });
 
@@ -319,7 +317,7 @@ class _MyHomePageState extends State<MyHomePage>
           setState(() {
             isProUser = false;
           });
-          print('User logged in - Pro status temporarily reset to false');
+          Logger.instance.info('User logged in - Pro status temporarily reset to false');
 
           // Add delay to ensure Firebase user data is available
           Future.delayed(const Duration(milliseconds: 1000), () {
@@ -357,7 +355,7 @@ class _MyHomePageState extends State<MyHomePage>
     );
     
     final newProStatus = result?['isPro'] ?? false;
-    print('Loading user data - Pro status: $newProStatus, UserData: $result');
+    Logger.instance.info('Loading user data - Pro status: $newProStatus, UserData: $result');
 
     if (mounted) {
       setState(() {
@@ -365,7 +363,7 @@ class _MyHomePageState extends State<MyHomePage>
       });
     }
 
-    print('Pro status updated to: $isProUser');
+    Logger.instance.info('Pro status updated to: $isProUser');
   }
 
   Future<void> _loadRoutineSlots() async {
@@ -426,18 +424,34 @@ class _MyHomePageState extends State<MyHomePage>
 
   // Debug method to test notifications immediately
   Future<void> _testNotifications() async {
-    print('🔧 DEBUG: Testing notifications...');
+    Logger.instance.debug('🔧 DEBUG: Testing notifications...');
 
     // Test immediate notification first
-    print('📱 Sending test notification...');
+    Logger.instance.debug('📱 Sending test notification...');
     await NotificationService.instance.testImmediateNotification();
 
     // Test immediate snooze notification
-    print('🔄 Sending test snooze notification...');
+    Logger.instance.debug('🔄 Sending test snooze notification...');
     await NotificationService.instance.testImmediateSnoozeNotification();
 
+    // NEW: Test PRO alarm functionality immediately
+    Logger.instance.debug('🚀 Testing PRO alarm functionality (immediate)...');
+    await NotificationService.instance.testProAlarmImmediate();
+
+    // NEW: Test comprehensive PRO alarm functionality
+    Logger.instance.debug('🧪 Testing comprehensive PRO alarm functionality...');
+    await NotificationService.instance.testProAlarmFunctionality();
+
+    // NEW: Test snooze functionality specifically
+    Logger.instance.debug('🔔 Testing snooze functionality specifically...');
+    await NotificationService.instance.testSnoozeOnly();
+
+    // NEW: Test iOS-specific snooze functionality
+    Logger.instance.debug('🍎 Testing iOS-specific snooze functionality...');
+    await NotificationService.instance.testIOSSnooze();
+
     // Also schedule a test notification for 5 seconds to test snooze
-    print('⏰ Scheduling snooze test for 5 seconds from now...');
+    Logger.instance.debug('⏰ Scheduling snooze test for 5 seconds from now...');
     await NotificationService.instance.scheduleTestNotification(
       time: DateTime.now().add(const Duration(seconds: 5)),
       title: 'Test Alarm with Snooze',
@@ -445,32 +459,32 @@ class _MyHomePageState extends State<MyHomePage>
     );
 
     // Schedule a notification for 10 seconds from now
-    print('📅 Scheduling notification for 10 seconds from now...');
+    Logger.instance.debug('📅 Scheduling notification for 10 seconds from now...');
     await _scheduleTestNotificationSoon();
 
     // Check current routine state
-    print('📱 Current App State:');
-    print('  - Total routines: ${routineSlots.length}');
-    print('  - Active routine: ${activeSlot?.name ?? 'None'}');
-    print('  - Is Pro User: $isProUser');
+    Logger.instance.debug('📱 Current App State:');
+    Logger.instance.debug('  - Total routines: ${routineSlots.length}');
+    Logger.instance.debug('  - Active routine: ${activeSlot?.name ?? 'None'}');
+    Logger.instance.debug('  - Is Pro User: $isProUser');
     if (activeSlot != null) {
-      print('  - Selected days: ${activeSlot!.selectedDays}');
-      print('  - Time slots with alarms: ${activeSlot!.timeSlots.where((ts) => ts.hasAlarm).length}');
+      Logger.instance.debug('  - Selected days: ${activeSlot!.selectedDays}');
+      Logger.instance.debug('  - Time slots with alarms: ${activeSlot!.timeSlots.where((ts) => ts.hasAlarm).length}');
 
       // Print details about ALL time slots
       for (int i = 0; i < activeSlot!.timeSlots.length; i++) {
         final slot = activeSlot!.timeSlots[i];
-        print('    [$i] "${slot.label}" at ${slot.startTime}-${slot.endTime}');
-        print('        - hasAlarm: ${slot.hasAlarm}');
+        Logger.instance.debug('    [$i] "${slot.label}" at ${slot.startTime}-${slot.endTime}');
+        Logger.instance.debug('        - hasAlarm: ${slot.hasAlarm}');
         if (slot.hasAlarm) {
-          print('        - hasPreAlarm: ${slot.hasPreAlarm} (${slot.preAlarmMinutes}min)');
-          print('        - snoozeEnabled: ${slot.snoozeEnabled} (${slot.snoozeDuration}min, max ${slot.maxSnoozeCount})');
+          Logger.instance.debug('        - hasPreAlarm: ${slot.hasPreAlarm} (${slot.preAlarmMinutes}min)');
+          Logger.instance.debug('        - Smart Intervals: ${slot.smartIntervalsEnabled} (${slot.smartIntervalMinutes}min, silent: ${slot.silentIntervals})');
         }
       }
     }
 
     // Test scheduling
-    print('📅 Testing notification scheduling for active routine...');
+    Logger.instance.debug('📅 Testing notification scheduling for active routine...');
     await _scheduleNotificationsForActiveRoutine();
   }
 
@@ -484,31 +498,12 @@ class _MyHomePageState extends State<MyHomePage>
         title: 'Test Alarm - 10s delay',
         body: 'This notification was scheduled 10 seconds ago',
       );
-      print('✅ Test notification scheduled for: ${futureTime.toString()}');
+      Logger.instance.info('✅ Test notification scheduled for: ${futureTime.toString()}');
     } catch (error) {
-      print('❌ Failed to schedule test notification: $error');
+      Logger.instance.error('❌ Failed to schedule test notification: $error');
     }
   }
 
-  // Debug method to run notification system verification
-  Future<void> _runNotificationTests() async {
-    print('🔧 DEBUG: Running notification system verification...');
-
-    // Verify day-of-week calculations
-    final dayCalculationCorrect = NotificationService.instance.verifyDayOfWeekCalculation();
-    print('✅ Day-of-week calculations: ${dayCalculationCorrect ? 'PASSED' : 'FAILED'}');
-
-    // Run all test scenarios
-    final testResults = await NotificationService.instance.runAllTests();
-
-    print('📊 Test Results Summary:');
-    for (final result in testResults) {
-      print('${result.passed ? '✅' : '❌'} ${result.scenario}: ${result.details}');
-    }
-
-    final passedCount = testResults.where((r) => r.passed).length;
-    print('🎯 Overall: $passedCount/${testResults.length} tests passed');
-  }
 
   void _initializeTriggerInputs(StateMachineController controller) {
     // Try to find triggers with many possible names

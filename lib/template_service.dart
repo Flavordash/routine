@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'utils/logger.dart';
 
 // Template data model
 class Template {
@@ -140,7 +141,7 @@ class TemplateService {
       await docRef.set(template.toMap());
       return true;
     } catch (e) {
-      print('Error sharing template: $e');
+      Logger.instance.error('Error sharing template: $e');
       return false;
     }
   }
@@ -184,7 +185,7 @@ class TemplateService {
 
       return templates;
     } catch (e) {
-      print('Error fetching templates: $e');
+      Logger.instance.error('Error fetching templates: $e');
       return [];
     }
   }
@@ -202,7 +203,7 @@ class TemplateService {
           .map((doc) => Template.fromMap(doc.data() as Map<String, dynamic>))
           .toList();
     } catch (e) {
-      print('Error fetching featured templates: $e');
+      Logger.instance.error('Error fetching featured templates: $e');
       return [];
     }
   }
@@ -215,7 +216,7 @@ class TemplateService {
       });
       return true;
     } catch (e) {
-      print('Error liking template: $e');
+      Logger.instance.error('Error liking template: $e');
       return false;
     }
   }
@@ -228,7 +229,7 @@ class TemplateService {
       });
       return true;
     } catch (e) {
-      print('Error unliking template: $e');
+      Logger.instance.error('Error unliking template: $e');
       return false;
     }
   }
@@ -259,13 +260,14 @@ class TemplateService {
   // Get available categories for filtering
   static const List<String> categories = [
     'Productivity',
-    'Health & Fitness', 
+    'Health & Fitness',
     'Work & Career',
     'Education',
     'Lifestyle',
     'Self Care',
     'Family & Social',
     'Entertainment',
+    'Custom',
   ];
 
   // Get available lifestyle types

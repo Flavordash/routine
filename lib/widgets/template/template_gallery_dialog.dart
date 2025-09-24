@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../l10n/app_localizations.dart';
 import '../../template_service.dart';
 import 'template_card.dart';
 
@@ -16,7 +17,8 @@ class TemplateGalleryDialog extends StatefulWidget {
 
 class _TemplateGalleryDialogState extends State<TemplateGalleryDialog> {
   String selectedCategory = 'All';
-  String selectedSortBy = 'Newest';
+  String selectedLifestyle = 'All';
+  String selectedSortBy = 'newest'; // Using key instead of localized string
   String searchQuery = '';
   bool isLoading = true;
   List<Template> templates = [];
@@ -25,7 +27,9 @@ class _TemplateGalleryDialogState extends State<TemplateGalleryDialog> {
   final Set<String> likedTemplates = <String>{}; // Track liked template IDs
 
   final categories = ['All', ...TemplateService.categories];
-  final sortOptions = ['Newest', 'Most Liked', 'Most Used', 'Popular'];
+  final lifestyleTypes = ['All', ...TemplateService.lifestyleTypes];
+  // Sort options using keys for consistent sorting logic
+  final sortOptionKeys = ['newest', 'mostLiked', 'mostUsed', 'popular'];
 
   @override
   void initState() {
@@ -38,6 +42,22 @@ class _TemplateGalleryDialogState extends State<TemplateGalleryDialog> {
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  // Get localized sort option labels
+  String _getSortLabel(String sortKey) {
+    switch (sortKey) {
+      case 'newest':
+        return AppLocalizations.of(context)!.newest;
+      case 'mostLiked':
+        return AppLocalizations.of(context)!.mostLiked;
+      case 'mostUsed':
+        return AppLocalizations.of(context)!.mostUsed;
+      case 'popular':
+        return AppLocalizations.of(context)!.popular;
+      default:
+        return sortKey;
+    }
   }
 
   void _onSearchChanged() {
@@ -72,7 +92,7 @@ class _TemplateGalleryDialogState extends State<TemplateGalleryDialog> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to load some templates: $e'),
+            content: Text(AppLocalizations.of(context)!.failedToLoadTemplates(e.toString())),
             backgroundColor: Colors.orange,
           ),
         );
@@ -86,6 +106,10 @@ class _TemplateGalleryDialogState extends State<TemplateGalleryDialog> {
       final categoryMatch =
           selectedCategory == 'All' || template.category == selectedCategory;
 
+      // Lifestyle filter
+      final lifestyleMatch =
+          selectedLifestyle == 'All' || template.lifestyle == selectedLifestyle;
+
       // Search filter
       final searchMatch =
           searchQuery.isEmpty ||
@@ -93,9 +117,11 @@ class _TemplateGalleryDialogState extends State<TemplateGalleryDialog> {
           template.description.toLowerCase().contains(
             searchQuery.toLowerCase(),
           ) ||
-          template.authorName.toLowerCase().contains(searchQuery.toLowerCase());
+          template.authorName.toLowerCase().contains(searchQuery.toLowerCase()) ||
+          template.category.toLowerCase().contains(searchQuery.toLowerCase()) ||
+          template.lifestyle.toLowerCase().contains(searchQuery.toLowerCase());
 
-      return categoryMatch && searchMatch;
+      return categoryMatch && lifestyleMatch && searchMatch;
     }).toList();
 
     // Apply sorting
@@ -104,13 +130,13 @@ class _TemplateGalleryDialogState extends State<TemplateGalleryDialog> {
 
   void _sortTemplates() {
     switch (selectedSortBy) {
-      case 'Most Liked':
+      case 'mostLiked':
         filteredTemplates.sort((a, b) => b.likes.compareTo(a.likes));
         break;
-      case 'Most Used':
+      case 'mostUsed':
         filteredTemplates.sort((a, b) => b.usageCount.compareTo(a.usageCount));
         break;
-      case 'Popular':
+      case 'popular':
         // Sort by combination of likes and usage count
         filteredTemplates.sort((a, b) {
           final scoreA = a.likes + (a.usageCount * 0.5);
@@ -118,7 +144,7 @@ class _TemplateGalleryDialogState extends State<TemplateGalleryDialog> {
           return scoreB.compareTo(scoreA);
         });
         break;
-      case 'Newest':
+      case 'newest':
       default:
         filteredTemplates.sort((a, b) => b.createdAt.compareTo(a.createdAt));
         break;
@@ -148,7 +174,7 @@ class _TemplateGalleryDialogState extends State<TemplateGalleryDialog> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Browse Templates',
+                  AppLocalizations.of(context)!.browseTemplates,
                   style: TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
@@ -170,7 +196,7 @@ class _TemplateGalleryDialogState extends State<TemplateGalleryDialog> {
             TextField(
               controller: _searchController,
               decoration: InputDecoration(
-                hintText: 'Search templates, authors...',
+                hintText: AppLocalizations.of(context)!.searchPlaceholder,
                 prefixIcon: Icon(Icons.search),
                 suffixIcon: searchQuery.isNotEmpty
                     ? IconButton(
@@ -205,18 +231,18 @@ class _TemplateGalleryDialogState extends State<TemplateGalleryDialog> {
                     child: DropdownButtonHideUnderline(
                       child: DropdownButton<String>(
                         value: selectedCategory,
-                        hint: const Text('Category'),
+                        hint: Text(AppLocalizations.of(context)!.category),
                         isExpanded: true,
                         style: TextStyle(
                           color: Theme.of(context).colorScheme.onSurface,
-                          fontSize: 14,
+                          fontSize: 12,
                         ),
                         items: categories.map((category) {
                           return DropdownMenuItem(
                             value: category,
                             child: Text(
                               category,
-                              style: const TextStyle(fontSize: 12),
+                              style: const TextStyle(fontSize: 11),
                             ),
                           );
                         }).toList(),
@@ -230,7 +256,44 @@ class _TemplateGalleryDialogState extends State<TemplateGalleryDialog> {
                     ),
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Container(
+                    height: 40,
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<String>(
+                        value: selectedLifestyle,
+                        hint: Text(AppLocalizations.of(context)!.lifestyle),
+                        isExpanded: true,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurface,
+                          fontSize: 12,
+                        ),
+                        items: lifestyleTypes.map((lifestyle) {
+                          return DropdownMenuItem(
+                            value: lifestyle,
+                            child: Text(
+                              lifestyle,
+                              style: const TextStyle(fontSize: 11),
+                            ),
+                          );
+                        }).toList(),
+                        onChanged: (value) {
+                          setState(() {
+                            selectedLifestyle = value!;
+                            _filterTemplates();
+                          });
+                        },
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 6),
                 Expanded(
                   child: Container(
                     height: 40,
@@ -242,18 +305,18 @@ class _TemplateGalleryDialogState extends State<TemplateGalleryDialog> {
                     child: DropdownButtonHideUnderline(
                       child: DropdownButton<String>(
                         value: selectedSortBy,
-                        hint: const Text('Sort by'),
+                        hint: Text(AppLocalizations.of(context)!.sortBy),
                         isExpanded: true,
                         style: TextStyle(
                           color: Theme.of(context).colorScheme.onSurface,
-                          fontSize: 14,
+                          fontSize: 12,
                         ),
-                        items: sortOptions.map((option) {
+                        items: sortOptionKeys.map((optionKey) {
                           return DropdownMenuItem(
-                            value: option,
+                            value: optionKey,
                             child: Text(
-                              option,
-                              style: const TextStyle(fontSize: 12),
+                              _getSortLabel(optionKey),
+                              style: const TextStyle(fontSize: 11),
                             ),
                           );
                         }).toList(),
@@ -287,7 +350,7 @@ class _TemplateGalleryDialogState extends State<TemplateGalleryDialog> {
           children: [
             CircularProgressIndicator(),
             SizedBox(height: 16),
-            Text('Loading templates...'),
+            Text(AppLocalizations.of(context)!.loadingTemplates),
           ],
         ),
       );
@@ -300,21 +363,21 @@ class _TemplateGalleryDialogState extends State<TemplateGalleryDialog> {
           children: [
             Icon(Icons.search_off, size: 48, color: Colors.grey),
             SizedBox(height: 16),
-            Text('No templates found'),
+            Text(AppLocalizations.of(context)!.noTemplatesFound),
             if (searchQuery.isNotEmpty ||
                 selectedCategory != 'All' ||
-                selectedSortBy != 'Newest')
+                selectedSortBy != 'newest')
               TextButton(
                 onPressed: () {
                   setState(() {
                     _searchController.clear();
                     selectedCategory = 'All';
-                    selectedSortBy = 'Newest';
+                    selectedSortBy = 'newest';
                     searchQuery = '';
                     _filterTemplates();
                   });
                 },
-                child: Text('Clear filters'),
+                child: Text(AppLocalizations.of(context)!.clearFilters),
               ),
           ],
         ),
@@ -328,8 +391,8 @@ class _TemplateGalleryDialogState extends State<TemplateGalleryDialog> {
           children: [
             Icon(Icons.cloud_off, size: 48, color: Colors.grey),
             SizedBox(height: 16),
-            Text('No templates available'),
-            TextButton(onPressed: _loadTemplates, child: Text('Retry')),
+            Text(AppLocalizations.of(context)!.noTemplatesAvailable),
+            TextButton(onPressed: _loadTemplates, child: Text(AppLocalizations.of(context)!.retry)),
           ],
         ),
       );
@@ -656,6 +719,7 @@ class _TemplateGalleryDialogState extends State<TemplateGalleryDialog> {
         author: 'Routine 24',
         likes: 324,
         isOfficial: true,
+        lifestyle: 'Night Owl',
         timeSlots: [
           {
             'startTime': '18:00',
@@ -764,7 +828,7 @@ class _TemplateGalleryDialogState extends State<TemplateGalleryDialog> {
         title: mockTemplate.name,
         description: mockTemplate.description,
         category: mockTemplate.category,
-        lifestyle: 'Balanced', // Default lifestyle for app templates
+        lifestyle: mockTemplate.lifestyle,
         authorId: 'routine24_official',
         authorName: 'Routine 24',
         timeSlots: convertedTimeSlots,
@@ -788,6 +852,7 @@ class RoutineTemplate {
   final List<Map<String, dynamic>> timeSlots;
   final bool isOfficial;
   final bool isLiked;
+  final String lifestyle;
 
   RoutineTemplate({
     required this.id,
@@ -799,6 +864,7 @@ class RoutineTemplate {
     required this.timeSlots,
     this.isOfficial = false,
     this.isLiked = false,
+    this.lifestyle = 'Balanced',
   });
 
   RoutineTemplate copyWith({

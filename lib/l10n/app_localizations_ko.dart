@@ -359,7 +359,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get shareTemplates => '• 커뮤니티에 나만의 템플릿 공유';
 
   @override
-  String get advancedAlarmFeatures => '• 사전 알람 및 스누즈 기능이 포함된 고급 알람';
+  String get advancedAlarmFeatures => '• 사전 알람 및 스마트 간격 기능이 포함된 고급 알람';
 
   @override
   String get browseImportTemplates => '• 커뮤니티 템플릿 탐색 및 가져오기';
@@ -371,32 +371,242 @@ class AppLocalizationsKo extends AppLocalizations {
   String get cloudSyncBackupFull => '• 클라우드 동기화 및 백업';
 
   @override
-  String get notifications => 'Notifications';
+  String get notifications => '알림';
 
   @override
-  String get notificationPermissions => 'Notification Permissions';
+  String get notificationPermissions => '알림 권한';
 
   @override
-  String get notificationsEnabled => 'Enabled';
+  String get notificationsEnabled => '활성화됨';
 
   @override
-  String get notificationsDisabled => 'Disabled';
+  String get notificationsDisabled => '비활성화됨';
 
   @override
-  String get notificationSettings => 'Notification Settings';
+  String get notificationSettings => '알림 설정';
 
   @override
   String get notificationPermissionDescription =>
-      'Allow notifications to receive alarms and reminders for your routines';
+      '루틴에 대한 알람과 리마인더를 받으려면 알림을 허용하세요';
 
   @override
-  String get openSettings => 'Open Settings';
+  String get openSettings => '설정 열기';
 
   @override
   String get notificationPermissionGranted =>
-      'Notifications are enabled! You\'ll receive alarms for your routines.';
+      '알림이 활성화되었습니다! 루틴에 대한 알람을 받을 수 있습니다.';
 
   @override
-  String get notificationPermissionDenied =>
-      'Please enable notifications in your device settings to receive alarms.';
+  String get notificationPermissionDenied => '알람을 받으려면 기기 설정에서 알림을 활성화해 주세요.';
+
+  @override
+  String get preAlarm => '사전 알람';
+
+  @override
+  String get preAlarmTime => '사전 알람 시간:';
+
+  @override
+  String get smartIntervals => '스마트 간격';
+
+  @override
+  String get intervalDuration => '간격 지속 시간:';
+
+  @override
+  String get silentIntervals => '무음 간격';
+
+  @override
+  String get progressMessages => '진행 메시지';
+
+  @override
+  String minutesShort(int minutes) {
+    return '$minutes분';
+  }
+
+  @override
+  String timesCount(int count) {
+    return '$count회';
+  }
+
+  @override
+  String get advancedAlarmPromoText =>
+      '사전 알람 경고 및 스마트 간격 기능이 포함된 고급 알람 기능을 이용하세요.';
+
+  @override
+  String get fillFreeTime => '자유 시간 채우기';
+
+  @override
+  String get browseTemplates => '템플릿 탐색';
+
+  @override
+  String get filledFreeTime => '24시간을 자유 시간으로 채웠습니다!';
+
+  @override
+  String get noFreeTimeGaps => '채울 자유 시간 공백이 없습니다';
+
+  @override
+  String get purchaseSuccessful => '구매 성공! 이제 PRO 액세스가 가능합니다.';
+
+  @override
+  String purchaseFailed(String error) {
+    return '구매 실패: $error';
+  }
+
+  @override
+  String get purchasesRestored => '구매가 성공적으로 복원되었습니다!';
+
+  @override
+  String restoreFailed(String error) {
+    return '복원 실패: $error';
+  }
+
+  @override
+  String get monday => '월요일';
+
+  @override
+  String get tuesday => '화요일';
+
+  @override
+  String get wednesday => '수요일';
+
+  @override
+  String get thursday => '목요일';
+
+  @override
+  String get friday => '금요일';
+
+  @override
+  String get saturday => '토요일';
+
+  @override
+  String get sunday => '일요일';
+
+  @override
+  String get selectDaysActive => '이 루틴이 활성화될 요일을 선택하세요:';
+
+  @override
+  String get newest => '최신순';
+
+  @override
+  String get mostLiked => '좋아요 순';
+
+  @override
+  String get mostUsed => '사용량 순';
+
+  @override
+  String get searchPlaceholder => '템플릿 검색...';
+
+  @override
+  String get category => '카테고리';
+
+  @override
+  String get lifestyle => '라이프스타일';
+
+  @override
+  String get sortBy => '정렬 기준';
+
+  @override
+  String get loadingTemplates => '템플릿 로딩 중...';
+
+  @override
+  String get noTemplatesFound => '템플릿을 찾을 수 없습니다';
+
+  @override
+  String get clearFilters => '필터 지우기';
+
+  @override
+  String get noTemplatesAvailable => '사용 가능한 템플릿이 없습니다';
+
+  @override
+  String get retry => '다시 시도';
+
+  @override
+  String templateCategory(String category) {
+    return '카테고리: $category';
+  }
+
+  @override
+  String failedToLoadTemplates(String error) {
+    return '일부 템플릿 로드 실패: $error';
+  }
+
+  @override
+  String get all => '전체';
+
+  @override
+  String get colorSettings => 'Color Settings';
+
+  @override
+  String get shareAsTemplate => 'Share as Template';
+
+  @override
+  String get daySettings => 'Day Settings';
+
+  @override
+  String get renameRoutineDialog => 'Rename Routine';
+
+  @override
+  String get deleteRoutineDialog => 'Delete Routine';
+
+  @override
+  String deleteConfirmMessage(String name) {
+    return 'Are you sure you want to delete \"$name\"?';
+  }
+
+  @override
+  String daySettingsFor(String name) {
+    return 'Day Settings for $name';
+  }
+
+  @override
+  String chooseColorFor(String name) {
+    return 'Choose Color for $name';
+  }
+
+  @override
+  String get defaultColor => 'Default';
+
+  @override
+  String get templateName => 'Template Name';
+
+  @override
+  String get description => 'Description';
+
+  @override
+  String get enterTemplateName => 'Enter template name...';
+
+  @override
+  String get describeRoutine => 'Describe this routine...';
+
+  @override
+  String get lifestyleType => 'Lifestyle Type';
+
+  @override
+  String get sharingTemplate => 'Sharing template...';
+
+  @override
+  String get share => 'Share';
+
+  @override
+  String get pleaseEnterTemplateName => 'Please enter a template name';
+
+  @override
+  String templateSharedSuccess(String name) {
+    return 'Template \"$name\" shared successfully!';
+  }
+
+  @override
+  String get templateShareFailed =>
+      'Failed to share template. Please try again.';
+
+  @override
+  String get everyDay => 'Every day';
+
+  @override
+  String get noDaysSelected => 'No days selected';
+
+  @override
+  String get hoursShort => 'h';
+
+  @override
+  String get minutesShortFormat => 'm';
 }

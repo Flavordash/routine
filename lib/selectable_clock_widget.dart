@@ -21,9 +21,10 @@ class TimeSlot {
   final bool hasAlarm;
   final bool hasPreAlarm;
   final int preAlarmMinutes;
-  final bool snoozeEnabled;
-  final int snoozeDuration;
-  final int maxSnoozeCount;
+  final bool smartIntervalsEnabled;
+  final int smartIntervalMinutes;
+  final bool silentIntervals;
+  final bool showProgressMessages;
 
   TimeSlot({
     required this.id,
@@ -38,9 +39,10 @@ class TimeSlot {
     this.hasAlarm = false,
     this.hasPreAlarm = false,
     this.preAlarmMinutes = 15,
-    this.snoozeEnabled = true,
-    this.snoozeDuration = 10,
-    this.maxSnoozeCount = 3,
+    this.smartIntervalsEnabled = false,
+    this.smartIntervalMinutes = 0,
+    this.silentIntervals = false,
+    this.showProgressMessages = true,
   });
 }
 
@@ -572,9 +574,10 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
         hasAlarm: false,
         hasPreAlarm: false,
         preAlarmMinutes: 15,
-        snoozeEnabled: true,
-        snoozeDuration: 10,
-        maxSnoozeCount: 3,
+        smartIntervalsEnabled: false,
+        smartIntervalMinutes: 0,
+        silentIntervals: false,
+        showProgressMessages: true,
       );
 
       final updatedSlots = List<TimeSlot>.from(timeSlots)..add(freeTimeSlot);
@@ -584,8 +587,8 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
       widget.onTimeSlotsChanged?.call(routineTimeSlots);
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Filled 24-hour period with Free Time!'),
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.filledFreeTime),
           backgroundColor: Colors.green,
         ),
       );
@@ -617,9 +620,10 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
         hasAlarm: false,
         hasPreAlarm: false,
         preAlarmMinutes: 15,
-        snoozeEnabled: true,
-        snoozeDuration: 10,
-        maxSnoozeCount: 3,
+        smartIntervalsEnabled: false,
+        smartIntervalMinutes: 0,
+        silentIntervals: false,
+        showProgressMessages: true,
       );
       newFreeTimeSlots.add(freeSlot);
     }
@@ -650,9 +654,10 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
           hasAlarm: false,
           hasPreAlarm: false,
           preAlarmMinutes: 15,
-          snoozeEnabled: true,
-          snoozeDuration: 10,
-          maxSnoozeCount: 3,
+          smartIntervalsEnabled: false,
+          smartIntervalMinutes: 0,
+          silentIntervals: false,
+          showProgressMessages: true,
         );
         newFreeTimeSlots.add(freeSlot);
       }
@@ -675,9 +680,10 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
         hasAlarm: false,
         hasPreAlarm: false,
         preAlarmMinutes: 15,
-        snoozeEnabled: true,
-        snoozeDuration: 10,
-        maxSnoozeCount: 3,
+        smartIntervalsEnabled: false,
+        smartIntervalMinutes: 0,
+        silentIntervals: false,
+        showProgressMessages: true,
       );
       newFreeTimeSlots.add(freeSlot);
     }
@@ -700,8 +706,8 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('No free time gaps found to fill'),
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.noFreeTimeGaps),
           backgroundColor: Colors.orange,
         ),
       );
@@ -723,9 +729,10 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
     bool hasAlarm = existingSlot?.hasAlarm ?? widget.isProUser;
     bool hasPreAlarm = existingSlot?.hasPreAlarm ?? false;
     int preAlarmMinutes = existingSlot?.preAlarmMinutes ?? 15;
-    bool snoozeEnabled = existingSlot?.snoozeEnabled ?? true;
-    int snoozeDuration = existingSlot?.snoozeDuration ?? 10;
-    int maxSnoozeCount = existingSlot?.maxSnoozeCount ?? 3;
+    bool smartIntervalsEnabled = existingSlot?.smartIntervalsEnabled ?? false;
+    int smartIntervalMinutes = existingSlot?.smartIntervalMinutes ?? 0;
+    bool silentIntervals = existingSlot?.silentIntervals ?? false;
+    bool showProgressMessages = existingSlot?.showProgressMessages ?? true;
 
     // Initialize time values with proper null handling
     int selectedStartHour = existingSlot?.startHour ?? (startHour ?? 0);
@@ -1334,7 +1341,7 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
                                     const SizedBox(width: 8),
                                     Expanded(
                                       child: Text(
-                                        'Pre-Alarm',
+                                        AppLocalizations.of(context)!.preAlarm,
                                         style: TextStyle(
                                           fontSize: 14,
                                           color: Theme.of(
@@ -1362,7 +1369,7 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
                                       children: [
                                         Expanded(
                                           child: Text(
-                                            'Pre-alarm time:',
+                                            AppLocalizations.of(context)!.preAlarmTime,
                                             style: TextStyle(
                                               fontSize: 12,
                                               color: Theme.of(context)
@@ -1381,7 +1388,7 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
                                             return DropdownMenuItem(
                                               value: minutes,
                                               child: Text(
-                                                '$minutes min',
+                                                AppLocalizations.of(context)!.minutesShort(minutes),
                                                 style: const TextStyle(
                                                   fontSize: 12,
                                                 ),
@@ -1401,11 +1408,11 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
 
                                 const SizedBox(height: 12),
 
-                                // Snooze Settings
+                                // Smart Intervals Settings
                                 Row(
                                   children: [
                                     Icon(
-                                      Icons.snooze,
+                                      Icons.timer,
                                       color: Theme.of(
                                         context,
                                       ).colorScheme.onSurface,
@@ -1414,7 +1421,7 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
                                     const SizedBox(width: 8),
                                     Expanded(
                                       child: Text(
-                                        'Allow Snooze',
+                                        AppLocalizations.of(context)!.smartIntervals,
                                         style: TextStyle(
                                           fontSize: 14,
                                           color: Theme.of(
@@ -1424,17 +1431,17 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
                                       ),
                                     ),
                                     Switch(
-                                      value: snoozeEnabled,
+                                      value: smartIntervalsEnabled,
                                       onChanged: (value) {
                                         setModalState(() {
-                                          snoozeEnabled = value;
+                                          smartIntervalsEnabled = value;
                                         });
                                       },
                                     ),
                                   ],
                                 ),
 
-                                if (snoozeEnabled) ...[
+                                if (smartIntervalsEnabled) ...[
                                   const SizedBox(height: 8),
                                   Padding(
                                     padding: const EdgeInsets.only(left: 26),
@@ -1444,7 +1451,7 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
                                           children: [
                                             Expanded(
                                               child: Text(
-                                                'Duration:',
+                                                AppLocalizations.of(context)!.intervalDuration,
                                                 style: TextStyle(
                                                   fontSize: 12,
                                                   color: Theme.of(context)
@@ -1455,15 +1462,15 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
                                               ),
                                             ),
                                             DropdownButton<int>(
-                                              value: snoozeDuration,
+                                              value: smartIntervalMinutes,
                                               underline: Container(),
-                                              items: [5, 10, 15, 20].map((
+                                              items: [0, 5, 10, 15, 30].map((
                                                 minutes,
                                               ) {
                                                 return DropdownMenuItem(
                                                   value: minutes,
                                                   child: Text(
-                                                    '$minutes min',
+                                                    minutes == 0 ? 'None' : '$minutes min',
                                                     style: const TextStyle(
                                                       fontSize: 12,
                                                     ),
@@ -1472,18 +1479,24 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
                                               }).toList(),
                                               onChanged: (value) {
                                                 setModalState(() {
-                                                  snoozeDuration = value!;
+                                                  smartIntervalMinutes = value!;
                                                 });
                                               },
                                             ),
                                           ],
                                         ),
-                                        const SizedBox(height: 4),
+                                        const SizedBox(height: 8),
                                         Row(
                                           children: [
+                                            Icon(
+                                              Icons.vibration,
+                                              color: Theme.of(context).colorScheme.onSurface,
+                                              size: 16,
+                                            ),
+                                            const SizedBox(width: 8),
                                             Expanded(
                                               child: Text(
-                                                'Max attempts:',
+                                                AppLocalizations.of(context)!.silentIntervals,
                                                 style: TextStyle(
                                                   fontSize: 12,
                                                   color: Theme.of(context)
@@ -1493,25 +1506,42 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
                                                 ),
                                               ),
                                             ),
-                                            DropdownButton<int>(
-                                              value: maxSnoozeCount,
-                                              underline: Container(),
-                                              items: [1, 2, 3, 4, 5].map((
-                                                count,
-                                              ) {
-                                                return DropdownMenuItem(
-                                                  value: count,
-                                                  child: Text(
-                                                    '$count times',
-                                                    style: const TextStyle(
-                                                      fontSize: 12,
-                                                    ),
-                                                  ),
-                                                );
-                                              }).toList(),
+                                            Switch(
+                                              value: silentIntervals,
                                               onChanged: (value) {
                                                 setModalState(() {
-                                                  maxSnoozeCount = value!;
+                                                  silentIntervals = value;
+                                                });
+                                              },
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Row(
+                                          children: [
+                                            Icon(
+                                              Icons.message,
+                                              color: Theme.of(context).colorScheme.onSurface,
+                                              size: 16,
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Expanded(
+                                              child: Text(
+                                                AppLocalizations.of(context)!.progressMessages,
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  color: Theme.of(context)
+                                                      .colorScheme
+                                                      .onSurface
+                                                      .withValues(alpha: 0.7),
+                                                ),
+                                              ),
+                                            ),
+                                            Switch(
+                                              value: showProgressMessages,
+                                              onChanged: (value) {
+                                                setModalState(() {
+                                                  showProgressMessages = value;
                                                 });
                                               },
                                             ),
@@ -1526,7 +1556,7 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
                                 Column(
                                   children: [
                                     Text(
-                                      'Get advanced alarm features with pre-alarm warnings and snooze functionality.',
+                                      AppLocalizations.of(context)!.advancedAlarmPromoText,
                                       style: TextStyle(
                                         fontSize: 14,
                                         color: Theme.of(context)
@@ -1620,9 +1650,10 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
                       hasAlarm: hasAlarm,
                       hasPreAlarm: hasPreAlarm,
                       preAlarmMinutes: preAlarmMinutes,
-                      snoozeEnabled: snoozeEnabled,
-                      snoozeDuration: snoozeDuration,
-                      maxSnoozeCount: maxSnoozeCount,
+                      smartIntervalsEnabled: smartIntervalsEnabled,
+                      smartIntervalMinutes: smartIntervalMinutes,
+                      silentIntervals: silentIntervals,
+                      showProgressMessages: showProgressMessages,
                     );
 
                     if (existingSlot != null) {
@@ -1898,9 +1929,9 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
     int minutes = durationMinutes % 60;
 
     if (minutes == 0) {
-      return '${hours}h';
+      return '${hours}${AppLocalizations.of(context)!.hoursShort}';
     }
-    return '${hours}h ${minutes}m';
+    return '${hours}${AppLocalizations.of(context)!.hoursShort} ${minutes}${AppLocalizations.of(context)!.minutesShortFormat}';
   }
 
   void _triggerSparkAnimation(Color color) {
@@ -2233,7 +2264,7 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
         Navigator.of(context).pop(); // Close loading dialog
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Purchase successful! You now have PRO access.'),
+            content: Text(AppLocalizations.of(context)!.purchaseSuccessful),
             backgroundColor: Colors.green,
           ),
         );
@@ -2247,7 +2278,7 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
         Navigator.of(context).pop(); // Close loading dialog
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Purchase failed: $error'),
+            content: Text(AppLocalizations.of(context)!.purchaseFailed(error)),
             backgroundColor: Colors.red,
           ),
         );
@@ -2258,7 +2289,7 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Purchases restored successfully!'),
+            content: Text(AppLocalizations.of(context)!.purchasesRestored),
             backgroundColor: Colors.green,
           ),
         );
@@ -2270,7 +2301,7 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Restore failed: $error'),
+            content: Text(AppLocalizations.of(context)!.restoreFailed(error)),
             backgroundColor: Colors.red,
           ),
         );
@@ -2389,7 +2420,7 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
                     SizedBox(width: (screenWidth * 0.01).clamp(2.0, 6.0)),
                     Flexible(
                       child: Text(
-                        'Fill Free Time',
+                        AppLocalizations.of(context)!.fillFreeTime,
                         style: TextStyle(
                           fontSize: (screenWidth * 0.025).clamp(9.0, 12.0),
                           fontWeight: FontWeight.w600,
@@ -2430,7 +2461,7 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
                     SizedBox(width: (screenWidth * 0.01).clamp(2.0, 6.0)),
                     Flexible(
                       child: Text(
-                        'Browse Templates',
+                        AppLocalizations.of(context)!.browseTemplates,
                         style: TextStyle(
                           fontSize: (screenWidth * 0.025).clamp(9.0, 12.0),
                           fontWeight: FontWeight.w600,
@@ -2536,9 +2567,10 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
       hasAlarm: routineTimeSlot.hasAlarm,
       hasPreAlarm: routineTimeSlot.hasPreAlarm,
       preAlarmMinutes: routineTimeSlot.preAlarmMinutes,
-      snoozeEnabled: routineTimeSlot.snoozeEnabled,
-      snoozeDuration: routineTimeSlot.snoozeDuration,
-      maxSnoozeCount: routineTimeSlot.maxSnoozeCount,
+      smartIntervalsEnabled: routineTimeSlot.smartIntervalsEnabled,
+      smartIntervalMinutes: routineTimeSlot.smartIntervalMinutes,
+      silentIntervals: routineTimeSlot.silentIntervals,
+      showProgressMessages: routineTimeSlot.showProgressMessages,
     );
   }
 
@@ -2557,9 +2589,10 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
       hasAlarm: timeSlot.notificationEnabled, // Map notificationEnabled to hasAlarm
       hasPreAlarm: timeSlot.hasPreAlarm,
       preAlarmMinutes: timeSlot.preAlarmMinutes,
-      snoozeEnabled: timeSlot.snoozeEnabled,
-      snoozeDuration: timeSlot.snoozeDuration,
-      maxSnoozeCount: timeSlot.maxSnoozeCount,
+      smartIntervalsEnabled: timeSlot.smartIntervalsEnabled,
+      smartIntervalMinutes: timeSlot.smartIntervalMinutes,
+      silentIntervals: timeSlot.silentIntervals,
+      showProgressMessages: timeSlot.showProgressMessages,
       createdAt: DateTime.now(),
     );
   }

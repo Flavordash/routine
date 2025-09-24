@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
+import '../utils/logger.dart';
 
 class AdService {
   static AdService? _instance;
@@ -47,15 +48,15 @@ class AdService {
       listener: BannerAdListener(
         onAdLoaded: (ad) {
           _isBannerAdReady = true;
-          print('Banner ad loaded');
+          Logger.instance.info('Banner ad loaded');
         },
         onAdFailedToLoad: (ad, error) {
-          print('Banner ad failed to load: $error');
+          Logger.instance.error('Banner ad failed to load: $error');
           ad.dispose();
           _isBannerAdReady = false;
         },
-        onAdOpened: (ad) => print('Banner ad opened'),
-        onAdClosed: (ad) => print('Banner ad closed'),
+        onAdOpened: (ad) => Logger.instance.info('Banner ad opened'),
+        onAdClosed: (ad) => Logger.instance.info('Banner ad closed'),
       ),
     );
 

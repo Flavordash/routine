@@ -297,66 +297,64 @@ class AppLocalizationsZh extends AppLocalizations {
   String get defaultRoutine => '默认日程';
 
   @override
-  String get scheduleSpecificDaysFull =>
-      'Schedule routine for specific days (Mon-Sun)';
+  String get scheduleSpecificDaysFull => '为特定日期安排例程（周一至周日）';
 
   @override
-  String get advancedNotificationsFull =>
-      'Advanced notification with vibration';
+  String get advancedNotificationsFull => '具有振动功能的高级通知';
 
   @override
-  String get getUnlimitedAccess => 'Get Unlimited Access';
+  String get getUnlimitedAccess => '获得无限访问权限';
 
   @override
-  String get removeAllAds => 'Remove all advertisements';
+  String get removeAllAds => '移除所有广告';
 
   @override
-  String get scheduleSpecificDays => 'Schedule Specific Days';
+  String get scheduleSpecificDays => '安排特定日期';
 
   @override
-  String get advancedNotifications => 'Advanced Notifications';
+  String get advancedNotifications => '高级通知';
 
   @override
-  String get cloudSyncBackup => 'Cloud Sync & Backup';
+  String get cloudSyncBackup => '云同步和备份';
 
   @override
-  String get chooseYourPlan => 'Choose Your Plan';
+  String get chooseYourPlan => '选择您的计划';
 
   @override
-  String get monthlyPlan => 'Monthly Plan';
+  String get monthlyPlan => '月度计划';
 
   @override
-  String get monthlyPrice => '\$3.99/month';
+  String get monthlyPrice => '\$3.99/月';
 
   @override
-  String get yearlyPlan => 'Yearly Plan';
+  String get yearlyPlan => '年度计划';
 
   @override
-  String get yearlyPrice => '\$7.99/year';
+  String get yearlyPrice => '\$7.99/年';
 
   @override
-  String get savingsText => 'Save 42%';
+  String get savingsText => '节省42%';
 
   @override
-  String get restore => 'Restore';
+  String get restore => '恢复';
 
   @override
-  String get popular => 'Popular';
+  String get popular => '热门';
 
   @override
-  String get processingPurchase => 'Processing Purchase...';
+  String get processingPurchase => '正在处理购买...';
 
   @override
-  String get purchasePlaceholder => 'Processing your purchase. Please wait...';
+  String get purchasePlaceholder => '正在处理您的购买，请稍候...';
 
   @override
-  String get restorePlaceholder => 'Restoring your purchases. Please wait...';
+  String get restorePlaceholder => '正在恢复您的购买，请稍候...';
 
   @override
   String get shareTemplates => '• 与社区分享您的自定义模板';
 
   @override
-  String get advancedAlarmFeatures => '• 具有预警和贪睡功能的高级闹钟';
+  String get advancedAlarmFeatures => '• 具有预警和智能间隔功能的高级闹钟';
 
   @override
   String get browseImportTemplates => '• 浏览和导入社区模板';
@@ -368,32 +366,239 @@ class AppLocalizationsZh extends AppLocalizations {
   String get cloudSyncBackupFull => '• 云同步和备份';
 
   @override
-  String get notifications => 'Notifications';
+  String get notifications => '通知';
 
   @override
-  String get notificationPermissions => 'Notification Permissions';
+  String get notificationPermissions => '通知权限';
 
   @override
-  String get notificationsEnabled => 'Enabled';
+  String get notificationsEnabled => '已启用';
 
   @override
-  String get notificationsDisabled => 'Disabled';
+  String get notificationsDisabled => '已禁用';
 
   @override
-  String get notificationSettings => 'Notification Settings';
+  String get notificationSettings => '通知设置';
 
   @override
-  String get notificationPermissionDescription =>
-      'Allow notifications to receive alarms and reminders for your routines';
+  String get notificationPermissionDescription => '允许通知以接收您例程的闹钟和提醒';
 
   @override
-  String get openSettings => 'Open Settings';
+  String get openSettings => '打开设置';
 
   @override
-  String get notificationPermissionGranted =>
-      'Notifications are enabled! You\'ll receive alarms for your routines.';
+  String get notificationPermissionGranted => '通知已启用！您将收到例程的闹钟。';
 
   @override
-  String get notificationPermissionDenied =>
-      'Please enable notifications in your device settings to receive alarms.';
+  String get notificationPermissionDenied => '请在设备设置中启用通知以接收闹钟。';
+
+  @override
+  String get preAlarm => '预警闹钟';
+
+  @override
+  String get preAlarmTime => '预警时间:';
+
+  @override
+  String get smartIntervals => '智能间隔';
+
+  @override
+  String get intervalDuration => '间隔持续时间:';
+
+  @override
+  String get silentIntervals => '静音间隔';
+
+  @override
+  String get progressMessages => '进度消息';
+
+  @override
+  String minutesShort(int minutes) {
+    return '$minutes分钟';
+  }
+
+  @override
+  String timesCount(int count) {
+    return '$count次';
+  }
+
+  @override
+  String get advancedAlarmPromoText => '获取具有预警提醒和智能间隔功能的高级闹钟功能。';
+
+  @override
+  String get fillFreeTime => '填充自由时间';
+
+  @override
+  String get browseTemplates => '浏览模板';
+
+  @override
+  String get filledFreeTime => '已用自由时间填满24小时!';
+
+  @override
+  String get noFreeTimeGaps => '未找到可填充的自由时间空隙';
+
+  @override
+  String get purchaseSuccessful => '购买成功！您现在拥有PRO访问权限。';
+
+  @override
+  String purchaseFailed(String error) {
+    return '购买失败：$error';
+  }
+
+  @override
+  String get purchasesRestored => '购买已成功恢复！';
+
+  @override
+  String restoreFailed(String error) {
+    return '恢复失败：$error';
+  }
+
+  @override
+  String get monday => '星期一';
+
+  @override
+  String get tuesday => '星期二';
+
+  @override
+  String get wednesday => '星期三';
+
+  @override
+  String get thursday => '星期四';
+
+  @override
+  String get friday => '星期五';
+
+  @override
+  String get saturday => '星期六';
+
+  @override
+  String get sunday => '星期日';
+
+  @override
+  String get selectDaysActive => '选择此例程应活跃的日期：';
+
+  @override
+  String get newest => '最新';
+
+  @override
+  String get mostLiked => '最受欢迎';
+
+  @override
+  String get mostUsed => '使用最多';
+
+  @override
+  String get searchPlaceholder => '搜索模板...';
+
+  @override
+  String get category => '类别';
+
+  @override
+  String get lifestyle => '生活方式';
+
+  @override
+  String get sortBy => '排序方式';
+
+  @override
+  String get loadingTemplates => '正在加载模板...';
+
+  @override
+  String get noTemplatesFound => '未找到模板';
+
+  @override
+  String get clearFilters => '清除筛选';
+
+  @override
+  String get noTemplatesAvailable => '没有可用的模板';
+
+  @override
+  String get retry => '重试';
+
+  @override
+  String templateCategory(String category) {
+    return '类别：$category';
+  }
+
+  @override
+  String failedToLoadTemplates(String error) {
+    return '加载某些模板失败：$error';
+  }
+
+  @override
+  String get all => '全部';
+
+  @override
+  String get colorSettings => 'Color Settings';
+
+  @override
+  String get shareAsTemplate => 'Share as Template';
+
+  @override
+  String get daySettings => 'Day Settings';
+
+  @override
+  String get renameRoutineDialog => 'Rename Routine';
+
+  @override
+  String get deleteRoutineDialog => 'Delete Routine';
+
+  @override
+  String deleteConfirmMessage(String name) {
+    return 'Are you sure you want to delete \"$name\"?';
+  }
+
+  @override
+  String daySettingsFor(String name) {
+    return 'Day Settings for $name';
+  }
+
+  @override
+  String chooseColorFor(String name) {
+    return 'Choose Color for $name';
+  }
+
+  @override
+  String get defaultColor => 'Default';
+
+  @override
+  String get templateName => 'Template Name';
+
+  @override
+  String get description => 'Description';
+
+  @override
+  String get enterTemplateName => 'Enter template name...';
+
+  @override
+  String get describeRoutine => 'Describe this routine...';
+
+  @override
+  String get lifestyleType => 'Lifestyle Type';
+
+  @override
+  String get sharingTemplate => 'Sharing template...';
+
+  @override
+  String get share => 'Share';
+
+  @override
+  String get pleaseEnterTemplateName => 'Please enter a template name';
+
+  @override
+  String templateSharedSuccess(String name) {
+    return 'Template \"$name\" shared successfully!';
+  }
+
+  @override
+  String get templateShareFailed =>
+      'Failed to share template. Please try again.';
+
+  @override
+  String get everyDay => 'Every day';
+
+  @override
+  String get noDaysSelected => 'No days selected';
+
+  @override
+  String get hoursShort => 'h';
+
+  @override
+  String get minutesShortFormat => 'm';
 }

@@ -34,7 +34,8 @@
       "Read(//Users/dashpill/Library/Android/sdk/**)",
       "Read(//Users/dashpill/.android/avd/**)",
       "Bash(/Users/dashpill/Library/Android/sdk/emulator/emulator -avd Pixel_6_API_21)",
-      "Bash(ffprobe:*)"
+      "Bash(ffprobe:*)",
+      "Bash(rmdir:*)"
     ],
     "deny": [],
     "ask": []

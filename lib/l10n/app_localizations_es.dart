@@ -309,59 +309,60 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get scheduleSpecificDaysFull =>
-      'Schedule routine for specific days (Mon-Sun)';
+      'Programar rutina para días específicos (Lun-Dom)';
 
   @override
   String get advancedNotificationsFull =>
-      'Advanced notification with vibration';
+      'Notificaciones avanzadas con vibración';
 
   @override
-  String get getUnlimitedAccess => 'Get Unlimited Access';
+  String get getUnlimitedAccess => 'Obtener Acceso Ilimitado';
 
   @override
-  String get removeAllAds => 'Remove all advertisements';
+  String get removeAllAds => 'Eliminar todos los anuncios';
 
   @override
-  String get scheduleSpecificDays => 'Schedule Specific Days';
+  String get scheduleSpecificDays => 'Programar Días Específicos';
 
   @override
-  String get advancedNotifications => 'Advanced Notifications';
+  String get advancedNotifications => 'Notificaciones Avanzadas';
 
   @override
-  String get cloudSyncBackup => 'Cloud Sync & Backup';
+  String get cloudSyncBackup => 'Sincronización y Respaldo en la Nube';
 
   @override
-  String get chooseYourPlan => 'Choose Your Plan';
+  String get chooseYourPlan => 'Elige Tu Plan';
 
   @override
-  String get monthlyPlan => 'Monthly Plan';
+  String get monthlyPlan => 'Plan Mensual';
 
   @override
-  String get monthlyPrice => '\$3.99/month';
+  String get monthlyPrice => '\$3.99/mes';
 
   @override
-  String get yearlyPlan => 'Yearly Plan';
+  String get yearlyPlan => 'Plan Anual';
 
   @override
-  String get yearlyPrice => '\$7.99/year';
+  String get yearlyPrice => '\$7.99/año';
 
   @override
-  String get savingsText => 'Save 42%';
+  String get savingsText => 'Ahorra 42%';
 
   @override
-  String get restore => 'Restore';
+  String get restore => 'Restaurar';
 
   @override
   String get popular => 'Popular';
 
   @override
-  String get processingPurchase => 'Processing Purchase...';
+  String get processingPurchase => 'Procesando Compra...';
 
   @override
-  String get purchasePlaceholder => 'Processing your purchase. Please wait...';
+  String get purchasePlaceholder => 'Procesando tu compra. Por favor espera...';
 
   @override
-  String get restorePlaceholder => 'Restoring your purchases. Please wait...';
+  String get restorePlaceholder =>
+      'Restaurando tus compras. Por favor espera...';
 
   @override
   String get shareTemplates =>
@@ -369,7 +370,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get advancedAlarmFeatures =>
-      '• Funciones avanzadas de alarma con pre-alarma y repetición';
+      '• Funciones avanzadas de alarma con pre-alarma e Intervalos Inteligentes';
 
   @override
   String get browseImportTemplates =>
@@ -382,32 +383,245 @@ class AppLocalizationsEs extends AppLocalizations {
   String get cloudSyncBackupFull => '• Sincronización y respaldo en la nube';
 
   @override
-  String get notifications => 'Notifications';
+  String get notifications => 'Notificaciones';
 
   @override
-  String get notificationPermissions => 'Notification Permissions';
+  String get notificationPermissions => 'Permisos de Notificación';
 
   @override
-  String get notificationsEnabled => 'Enabled';
+  String get notificationsEnabled => 'Habilitadas';
 
   @override
-  String get notificationsDisabled => 'Disabled';
+  String get notificationsDisabled => 'Deshabilitadas';
 
   @override
-  String get notificationSettings => 'Notification Settings';
+  String get notificationSettings => 'Configuración de Notificaciones';
 
   @override
   String get notificationPermissionDescription =>
-      'Allow notifications to receive alarms and reminders for your routines';
+      'Permitir notificaciones para recibir alarmas y recordatorios de tus rutinas';
 
   @override
-  String get openSettings => 'Open Settings';
+  String get openSettings => 'Abrir Configuración';
 
   @override
   String get notificationPermissionGranted =>
-      'Notifications are enabled! You\'ll receive alarms for your routines.';
+      '¡Las notificaciones están habilitadas! Recibirás alarmas para tus rutinas.';
 
   @override
   String get notificationPermissionDenied =>
-      'Please enable notifications in your device settings to receive alarms.';
+      'Por favor habilita las notificaciones en la configuración de tu dispositivo para recibir alarmas.';
+
+  @override
+  String get preAlarm => 'Pre-Alarma';
+
+  @override
+  String get preAlarmTime => 'Tiempo de pre-alarma:';
+
+  @override
+  String get smartIntervals => 'Intervalos Inteligentes';
+
+  @override
+  String get intervalDuration => 'Duración del Intervalo:';
+
+  @override
+  String get silentIntervals => 'Intervalos Silenciosos';
+
+  @override
+  String get progressMessages => 'Mensajes de Progreso';
+
+  @override
+  String minutesShort(int minutes) {
+    return '$minutes min';
+  }
+
+  @override
+  String timesCount(int count) {
+    return '$count veces';
+  }
+
+  @override
+  String get advancedAlarmPromoText =>
+      'Obtén funciones avanzadas de alarma con avisos de pre-alarma y funcionalidad de Intervalos Inteligentes.';
+
+  @override
+  String get fillFreeTime => 'Llenar Tiempo Libre';
+
+  @override
+  String get browseTemplates => 'Explorar Plantillas';
+
+  @override
+  String get filledFreeTime => '¡Período de 24 horas llenado con Tiempo Libre!';
+
+  @override
+  String get noFreeTimeGaps =>
+      'No se encontraron espacios de tiempo libre para llenar';
+
+  @override
+  String get purchaseSuccessful => '¡Compra exitosa! Ahora tienes acceso PRO.';
+
+  @override
+  String purchaseFailed(String error) {
+    return 'Compra falló: $error';
+  }
+
+  @override
+  String get purchasesRestored => '¡Compras restauradas exitosamente!';
+
+  @override
+  String restoreFailed(String error) {
+    return 'Restauración falló: $error';
+  }
+
+  @override
+  String get monday => 'Lunes';
+
+  @override
+  String get tuesday => 'Martes';
+
+  @override
+  String get wednesday => 'Miércoles';
+
+  @override
+  String get thursday => 'Jueves';
+
+  @override
+  String get friday => 'Viernes';
+
+  @override
+  String get saturday => 'Sábado';
+
+  @override
+  String get sunday => 'Domingo';
+
+  @override
+  String get selectDaysActive =>
+      'Selecciona los días en que esta rutina debe estar activa:';
+
+  @override
+  String get newest => 'Más Recientes';
+
+  @override
+  String get mostLiked => 'Más Gustados';
+
+  @override
+  String get mostUsed => 'Más Usados';
+
+  @override
+  String get searchPlaceholder => 'Buscar plantillas...';
+
+  @override
+  String get category => 'Categoría';
+
+  @override
+  String get lifestyle => 'Estilo de Vida';
+
+  @override
+  String get sortBy => 'Ordenar por';
+
+  @override
+  String get loadingTemplates => 'Cargando plantillas...';
+
+  @override
+  String get noTemplatesFound => 'No se encontraron plantillas';
+
+  @override
+  String get clearFilters => 'Limpiar filtros';
+
+  @override
+  String get noTemplatesAvailable => 'No hay plantillas disponibles';
+
+  @override
+  String get retry => 'Reintentar';
+
+  @override
+  String templateCategory(String category) {
+    return 'Categoría: $category';
+  }
+
+  @override
+  String failedToLoadTemplates(String error) {
+    return 'Error al cargar algunas plantillas: $error';
+  }
+
+  @override
+  String get all => 'Todos';
+
+  @override
+  String get colorSettings => 'Color Settings';
+
+  @override
+  String get shareAsTemplate => 'Share as Template';
+
+  @override
+  String get daySettings => 'Day Settings';
+
+  @override
+  String get renameRoutineDialog => 'Rename Routine';
+
+  @override
+  String get deleteRoutineDialog => 'Delete Routine';
+
+  @override
+  String deleteConfirmMessage(String name) {
+    return 'Are you sure you want to delete \"$name\"?';
+  }
+
+  @override
+  String daySettingsFor(String name) {
+    return 'Day Settings for $name';
+  }
+
+  @override
+  String chooseColorFor(String name) {
+    return 'Choose Color for $name';
+  }
+
+  @override
+  String get defaultColor => 'Default';
+
+  @override
+  String get templateName => 'Template Name';
+
+  @override
+  String get description => 'Description';
+
+  @override
+  String get enterTemplateName => 'Enter template name...';
+
+  @override
+  String get describeRoutine => 'Describe this routine...';
+
+  @override
+  String get lifestyleType => 'Lifestyle Type';
+
+  @override
+  String get sharingTemplate => 'Sharing template...';
+
+  @override
+  String get share => 'Share';
+
+  @override
+  String get pleaseEnterTemplateName => 'Please enter a template name';
+
+  @override
+  String templateSharedSuccess(String name) {
+    return 'Template \"$name\" shared successfully!';
+  }
+
+  @override
+  String get templateShareFailed =>
+      'Failed to share template. Please try again.';
+
+  @override
+  String get everyDay => 'Every day';
+
+  @override
+  String get noDaysSelected => 'No days selected';
+
+  @override
+  String get hoursShort => 'h';
+
+  @override
+  String get minutesShortFormat => 'm';
 }

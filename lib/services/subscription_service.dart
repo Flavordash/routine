@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:in_app_purchase/in_app_purchase.dart';
+import '../utils/logger.dart';
 
 class SubscriptionService {
   static SubscriptionService? _instance;
@@ -33,7 +34,7 @@ class SubscriptionService {
     _isAvailable = await _iap.isAvailable();
     
     if (!_isAvailable) {
-      print('In-app purchases not available');
+      Logger.instance.warning('In-app purchases not available');
       return;
     }
 
@@ -42,8 +43,8 @@ class SubscriptionService {
     // Listen to purchase updates
     _subscription = _iap.purchaseStream.listen(
       _onPurchaseUpdate,
-      onDone: () => print('Purchase stream done'),
-      onError: (error) => print('Purchase stream error: $error'),
+      onDone: () => Logger.instance.info('Purchase stream done'),
+      onError: (error) => Logger.instance.error('Purchase stream error: $error'),
     );
 
     // Load products
@@ -56,14 +57,14 @@ class SubscriptionService {
     final ProductDetailsResponse response = await _iap.queryProductDetails(_productIds);
     
     if (response.notFoundIDs.isNotEmpty) {
-      print('Products not found: ${response.notFoundIDs}');
+      Logger.instance.warning('Products not found: ${response.notFoundIDs}');
     }
-    
+
     _products = response.productDetails;
-    print('Loaded ${_products.length} products');
-    
+    Logger.instance.info('Loaded ${_products.length} products');
+
     for (var product in _products) {
-      print('Product: ${product.id} - ${product.title} - ${product.price}');
+      Logger.instance.info('Product: ${product.id} - ${product.title} - ${product.price}');
     }
   }
 
@@ -90,7 +91,7 @@ class SubscriptionService {
     try {
       await _iap.buyNonConsumable(purchaseParam: purchaseParam);
     } catch (e) {
-      print('Purchase failed: $e');
+      Logger.instance.error('Purchase failed: $e');
       _purchasePending = false;
       onError?.call('Purchase failed: $e');
     }
@@ -102,14 +103,14 @@ class SubscriptionService {
     try {
       await _iap.restorePurchases();
     } catch (e) {
-      print('Restore purchases failed: $e');
+      Logger.instance.error('Restore purchases failed: $e');
       onError?.call('Restore purchases failed: $e');
     }
   }
 
   void _onPurchaseUpdate(List<PurchaseDetails> purchaseDetailsList) {
     for (final PurchaseDetails purchaseDetails in purchaseDetailsList) {
-      print('Purchase update: ${purchaseDetails.status}');
+      Logger.instance.info('Purchase update: ${purchaseDetails.status}');
       
       switch (purchaseDetails.status) {
         case PurchaseStatus.pending:
@@ -123,7 +124,7 @@ class SubscriptionService {
           _handlePurchaseError(purchaseDetails);
           break;
         case PurchaseStatus.canceled:
-          print('Purchase canceled');
+          Logger.instance.info('Purchase canceled');
           _purchasePending = false;
           break;
       }
@@ -136,7 +137,7 @@ class SubscriptionService {
   }
 
   void _handleSuccessfulPurchase(PurchaseDetails purchaseDetails) {
-    print('Purchase successful: ${purchaseDetails.productID}');
+    Logger.instance.info('Purchase successful: ${purchaseDetails.productID}');
     _purchasePending = false;
     
     // Update user's pro status
@@ -146,7 +147,7 @@ class SubscriptionService {
   }
 
   void _handlePurchaseError(PurchaseDetails purchaseDetails) {
-    print('Purchase error: ${purchaseDetails.error}');
+    Logger.instance.error('Purchase error: ${purchaseDetails.error}');
     _purchasePending = false;
     onError?.call('Purchase failed: ${purchaseDetails.error?.message ?? 'Unknown error'}');
   }
@@ -160,7 +161,7 @@ class SubscriptionService {
       // This is a simplified check - in production you'd want to verify with your backend
       return false; // Will be updated when purchases are restored
     } catch (e) {
-      print('Error checking subscription: $e');
+      Logger.instance.error('Error checking subscription: $e');
     }
     
     return false;

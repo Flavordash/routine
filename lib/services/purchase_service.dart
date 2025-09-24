@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
+import '../utils/logger.dart';
 
 class PurchaseService {
   static const String kMonthlySubscriptionId = 'routine_monthly_sub';
@@ -44,7 +45,7 @@ class PurchaseService {
       },
       onError: (Object error) {
         if (kDebugMode) {
-          print('Purchase stream error: $error');
+          Logger.instance.error('Purchase stream error: $error');
         }
       },
     );

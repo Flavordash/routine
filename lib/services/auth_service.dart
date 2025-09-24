@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import '../utils/logger.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -18,7 +19,7 @@ class AuthService {
       );
       return result;
     } catch (error) {
-      print('Sign in error: $error');
+      Logger.instance.error('Sign in error: $error');
       rethrow;
     }
   }
@@ -37,43 +38,43 @@ class AuthService {
       
       return result;
     } catch (error) {
-      print('Registration error: $error');
+      Logger.instance.error('Registration error: $error');
       rethrow;
     }
   }
 
   Future<UserCredential?> signInWithGoogle() async {
     try {
-      print('Starting Google Sign-In...');
+      Logger.instance.info('Starting Google Sign-In...');
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-      
+
       if (googleUser == null) {
-        print('Google Sign-In was cancelled by user');
+        Logger.instance.info('Google Sign-In was cancelled by user');
         return null; // User cancelled the sign-in
       }
 
-      print('Google Sign-In successful, getting authentication...');
+      Logger.instance.info('Google Sign-In successful, getting authentication...');
       final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
 
-      print('Creating Firebase credential...');
+      Logger.instance.info('Creating Firebase credential...');
       final credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
 
-      print('Signing in to Firebase with Google credential...');
+      Logger.instance.info('Signing in to Firebase with Google credential...');
       UserCredential result = await _auth.signInWithCredential(credential);
-      
+
       // Create user document if it doesn't exist
       if (result.user != null) {
         await _createUserDocumentIfNotExists(result.user!);
       }
-      
-      print('Google Sign-In completed successfully');
+
+      Logger.instance.info('Google Sign-In completed successfully');
       return result;
     } catch (error) {
-      print('Google sign in error: $error');
-      print('Error type: ${error.runtimeType}');
+      Logger.instance.error('Google sign in error: $error');
+      Logger.instance.error('Error type: ${error.runtimeType}');
       rethrow;
     }
   }
@@ -84,26 +85,25 @@ class AuthService {
       await _auth.signOut();
       await _googleSignIn.signOut();
     } catch (error) {
-      print('Sign out error: $error');
+      Logger.instance.error('Sign out error: $error');
       rethrow;
     }
   }
 
   Future<void> _createUserDocument(User user) async {
     try {
-      // Check if this is the special PRO account
-      bool isPro = user.email == 'back7930@gmail.com';
-      
+      // Initialize with default free user status
+      // Pro status should be managed through proper subscription system
       await _firestore.collection('users').doc(user.uid).set({
         'email': user.email,
         'displayName': user.displayName,
         'photoURL': user.photoURL,
         'createdAt': FieldValue.serverTimestamp(),
-        'isPro': isPro,
+        'isPro': false, // Default to free user
         'routineSlots': [],
       });
     } catch (error) {
-      print('Error creating user document: $error');
+      Logger.instance.error('Error creating user document: $error');
     }
   }
 
@@ -130,7 +130,7 @@ class AuthService {
         }
       }
     } catch (error) {
-      print('Error checking/creating user document: $error');
+      Logger.instance.error('Error checking/creating user document: $error');
     }
   }
 
@@ -145,20 +145,15 @@ class AuthService {
         if (doc.exists) {
           Map<String, dynamic>? data = doc.data() as Map<String, dynamic>?;
           
-          // Auto-upgrade back7930@gmail.com to PRO if not already
-          if (data != null && 
-              currentUser!.email == 'back7930@gmail.com' && 
-              (data['isPro'] != true)) {
-            await updateUserProStatus(true);
-            data['isPro'] = true;
-          }
+          // Note: Pro status should be managed through proper subscription validation
+          // Remove hardcoded email checks for security
           
           return data;
         }
       }
       return null;
     } catch (error) {
-      print('Error getting user data: $error');
+      Logger.instance.error('Error getting user data: $error');
       return null;
     }
   }
@@ -171,7 +166,7 @@ class AuthService {
         });
       }
     } catch (error) {
-      print('Error updating pro status: $error');
+      Logger.instance.error('Error updating pro status: $error');
     }
   }
 
@@ -183,7 +178,7 @@ class AuthService {
         });
       }
     } catch (error) {
-      print('Error saving routine slots: $error');
+      Logger.instance.error('Error saving routine slots: $error');
     }
   }
 }

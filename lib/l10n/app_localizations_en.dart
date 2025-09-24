@@ -366,7 +366,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get advancedAlarmFeatures =>
-      '• Advanced alarm features with pre-alarm and snooze';
+      '• Advanced alarm features with pre-alarm and Smart Intervals';
 
   @override
   String get browseImportTemplates => '• Browse and import community templates';
@@ -406,4 +406,217 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get notificationPermissionDenied =>
       'Please enable notifications in your device settings to receive alarms.';
+
+  @override
+  String get preAlarm => 'Pre-Alarm';
+
+  @override
+  String get preAlarmTime => 'Pre-alarm time:';
+
+  @override
+  String get smartIntervals => 'Smart Intervals';
+
+  @override
+  String get intervalDuration => 'Interval Duration:';
+
+  @override
+  String get silentIntervals => 'Silent Intervals';
+
+  @override
+  String get progressMessages => 'Progress Messages';
+
+  @override
+  String minutesShort(int minutes) {
+    return '$minutes min';
+  }
+
+  @override
+  String timesCount(int count) {
+    return '$count times';
+  }
+
+  @override
+  String get advancedAlarmPromoText =>
+      'Get advanced alarm features with pre-alarm warnings and Smart Intervals functionality.';
+
+  @override
+  String get fillFreeTime => 'Fill Free Time';
+
+  @override
+  String get browseTemplates => 'Browse Templates';
+
+  @override
+  String get filledFreeTime => 'Filled 24-hour period with Free Time!';
+
+  @override
+  String get noFreeTimeGaps => 'No free time gaps found to fill';
+
+  @override
+  String get purchaseSuccessful =>
+      'Purchase successful! You now have PRO access.';
+
+  @override
+  String purchaseFailed(String error) {
+    return 'Purchase failed: $error';
+  }
+
+  @override
+  String get purchasesRestored => 'Purchases restored successfully!';
+
+  @override
+  String restoreFailed(String error) {
+    return 'Restore failed: $error';
+  }
+
+  @override
+  String get monday => 'Monday';
+
+  @override
+  String get tuesday => 'Tuesday';
+
+  @override
+  String get wednesday => 'Wednesday';
+
+  @override
+  String get thursday => 'Thursday';
+
+  @override
+  String get friday => 'Friday';
+
+  @override
+  String get saturday => 'Saturday';
+
+  @override
+  String get sunday => 'Sunday';
+
+  @override
+  String get selectDaysActive =>
+      'Select which days this routine should be active:';
+
+  @override
+  String get newest => 'Newest';
+
+  @override
+  String get mostLiked => 'Most Liked';
+
+  @override
+  String get mostUsed => 'Most Used';
+
+  @override
+  String get searchPlaceholder => 'Search templates...';
+
+  @override
+  String get category => 'Category';
+
+  @override
+  String get lifestyle => 'Lifestyle';
+
+  @override
+  String get sortBy => 'Sort by';
+
+  @override
+  String get loadingTemplates => 'Loading templates...';
+
+  @override
+  String get noTemplatesFound => 'No templates found';
+
+  @override
+  String get clearFilters => 'Clear filters';
+
+  @override
+  String get noTemplatesAvailable => 'No templates available';
+
+  @override
+  String get retry => 'Retry';
+
+  @override
+  String templateCategory(String category) {
+    return 'Category: $category';
+  }
+
+  @override
+  String failedToLoadTemplates(String error) {
+    return 'Failed to load some templates: $error';
+  }
+
+  @override
+  String get all => 'All';
+
+  @override
+  String get colorSettings => 'Color Settings';
+
+  @override
+  String get shareAsTemplate => 'Share as Template';
+
+  @override
+  String get daySettings => 'Day Settings';
+
+  @override
+  String get renameRoutineDialog => 'Rename Routine';
+
+  @override
+  String get deleteRoutineDialog => 'Delete Routine';
+
+  @override
+  String deleteConfirmMessage(String name) {
+    return 'Are you sure you want to delete \"$name\"?';
+  }
+
+  @override
+  String daySettingsFor(String name) {
+    return 'Day Settings for $name';
+  }
+
+  @override
+  String chooseColorFor(String name) {
+    return 'Choose Color for $name';
+  }
+
+  @override
+  String get defaultColor => 'Default';
+
+  @override
+  String get templateName => 'Template Name';
+
+  @override
+  String get description => 'Description';
+
+  @override
+  String get enterTemplateName => 'Enter template name...';
+
+  @override
+  String get describeRoutine => 'Describe this routine...';
+
+  @override
+  String get lifestyleType => 'Lifestyle Type';
+
+  @override
+  String get sharingTemplate => 'Sharing template...';
+
+  @override
+  String get share => 'Share';
+
+  @override
+  String get pleaseEnterTemplateName => 'Please enter a template name';
+
+  @override
+  String templateSharedSuccess(String name) {
+    return 'Template \"$name\" shared successfully!';
+  }
+
+  @override
+  String get templateShareFailed =>
+      'Failed to share template. Please try again.';
+
+  @override
+  String get everyDay => 'Every day';
+
+  @override
+  String get noDaysSelected => 'No days selected';
+
+  @override
+  String get hoursShort => 'h';
+
+  @override
+  String get minutesShortFormat => 'm';
 }
