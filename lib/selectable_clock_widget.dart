@@ -559,159 +559,178 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
   }
 
   void _fillFreeTime() {
-    if (timeSlots.isEmpty) {
-      // If no time slots exist, fill entire 24-hour period with Free Time
-      final freeTimeSlot = TimeSlot(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        startHour: 0,
-        startMinute: 0,
-        endHour: 23,
-        endMinute: 59,
-        title: 'Free Time',
-        description: 'Available free time',
-        color: const Color(0xFF9E9E9E), // Gray color
-        notificationEnabled: false,
-        hasAlarm: false,
-        hasPreAlarm: false,
-        preAlarmMinutes: 15,
-        smartIntervalsEnabled: false,
-        smartIntervalMinutes: 0,
-        silentIntervals: false,
-        showProgressMessages: true,
-      );
+    // Immediately use current widget data without waiting
+    _performFillFreeTime();
+  }
 
-      final updatedSlots = List<TimeSlot>.from(timeSlots)..add(freeTimeSlot);
-      final routineTimeSlots = updatedSlots
-          .map((slot) => _timeSlotToRoutineTimeSlot(slot))
-          .toList();
-      widget.onTimeSlotsChanged?.call(routineTimeSlots);
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(context)!.filledFreeTime),
-          backgroundColor: Colors.green,
-        ),
-      );
-      return;
+  // Get current fill button state information
+  Map<String, dynamic> _getFillButtonState() {
+    final widgetTimeSlots = widget.timeSlots.map(_routineTimeSlotToTimeSlot).toList();
+    final currentTimeSlots = widgetTimeSlots.where((slot) => slot.title != 'Free Time').toList();
+    final gaps = _findGaps(currentTimeSlots);
+
+    if (gaps.isEmpty) {
+      return {
+        'hasGaps': false,
+        'buttonText': 'Schedule Full',
+        'canFill': false,
+        'gapCount': 0,
+        'totalGapHours': 0,
+      };
     }
 
-    // Sort existing time slots by start time for gap analysis
-    final sortedSlots = List<TimeSlot>.from(timeSlots);
-    sortedSlots.sort((a, b) {
-      final aMinutes = a.startHour * 60 + a.startMinute;
-      final bMinutes = b.startHour * 60 + b.startMinute;
-      return aMinutes.compareTo(bMinutes);
-    });
+    final totalGapMinutes = gaps.fold<int>(0, (sum, gap) => sum + (gap['end']! - gap['start']!));
+    final totalGapHours = (totalGapMinutes / 60).round();
 
-    List<TimeSlot> newFreeTimeSlots = [];
+    return {
+      'hasGaps': true,
+      'buttonText': 'Fill Free Time',
+      'canFill': true,
+      'gapCount': gaps.length,
+      'totalGapHours': totalGapHours,
+    };
+  }
 
-    // Check for gap at the beginning of the day
-    if (sortedSlots.first.startHour > 0 || sortedSlots.first.startMinute > 0) {
-      final freeSlot = TimeSlot(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        startHour: 0,
-        startMinute: 0,
-        endHour: sortedSlots.first.startHour,
-        endMinute: sortedSlots.first.startMinute,
-        title: 'Free Time',
-        description: 'Available free time',
-        color: const Color(0xFF9E9E9E),
-        notificationEnabled: false,
-        hasAlarm: false,
-        hasPreAlarm: false,
-        preAlarmMinutes: 15,
-        smartIntervalsEnabled: false,
-        smartIntervalMinutes: 0,
-        silentIntervals: false,
-        showProgressMessages: true,
-      );
-      newFreeTimeSlots.add(freeSlot);
+  // Find all gaps in the current schedule
+  List<Map<String, int>> _findGaps(List<TimeSlot> slots) {
+    if (slots.isEmpty) {
+      // If no slots, the entire day is a gap
+      return [{'start': 0, 'end': 24 * 60}];
     }
 
-    // Check for gaps between existing slots
-    for (int i = 0; i < sortedSlots.length - 1; i++) {
-      final currentSlot = sortedSlots[i];
-      final nextSlot = sortedSlots[i + 1];
+    // Convert all slots to minute ranges and sort them
+    List<Map<String, int>> ranges = [];
 
-      final currentEndMinutes =
-          currentSlot.endHour * 60 + currentSlot.endMinute;
-      final nextStartMinutes = nextSlot.startHour * 60 + nextSlot.startMinute;
+    for (var slot in slots) {
+      if (slot.title == 'Free Time') continue; // Skip existing free time slots
 
-      if (nextStartMinutes > currentEndMinutes) {
-        final gapStartHour = currentSlot.endHour;
-        final gapStartMinute = currentSlot.endMinute;
+      final startMinutes = slot.startHour * 60 + slot.startMinute;
+      final endMinutes = slot.endHour * 60 + slot.endMinute;
 
-        final freeSlot = TimeSlot(
-          id: (DateTime.now().millisecondsSinceEpoch + i).toString(),
-          startHour: gapStartHour,
-          startMinute: gapStartMinute,
-          endHour: nextSlot.startHour,
-          endMinute: nextSlot.startMinute,
-          title: 'Free Time',
-          description: 'Available free time',
-          color: const Color(0xFF9E9E9E),
-          notificationEnabled: false,
-          hasAlarm: false,
-          hasPreAlarm: false,
-          preAlarmMinutes: 15,
-          smartIntervalsEnabled: false,
-          smartIntervalMinutes: 0,
-          silentIntervals: false,
-          showProgressMessages: true,
-        );
-        newFreeTimeSlots.add(freeSlot);
+      if (endMinutes <= startMinutes) {
+        // Overnight slot - split into two ranges
+        ranges.add({'start': startMinutes, 'end': 24 * 60}); // Evening part
+        ranges.add({'start': 0, 'end': endMinutes}); // Morning part
+      } else {
+        // Regular slot
+        ranges.add({'start': startMinutes, 'end': endMinutes});
       }
     }
 
-    // Check for gap at the end of the day
-    final lastSlot = sortedSlots.last;
-    if (lastSlot.endHour < 23 ||
-        (lastSlot.endHour == 23 && lastSlot.endMinute < 59)) {
-      final freeSlot = TimeSlot(
-        id: (DateTime.now().millisecondsSinceEpoch + 9999).toString(),
-        startHour: lastSlot.endHour,
-        startMinute: lastSlot.endMinute,
-        endHour: 23,
-        endMinute: 59,
-        title: 'Free Time',
-        description: 'Available free time',
-        color: const Color(0xFF9E9E9E),
-        notificationEnabled: false,
-        hasAlarm: false,
-        hasPreAlarm: false,
-        preAlarmMinutes: 15,
-        smartIntervalsEnabled: false,
-        smartIntervalMinutes: 0,
-        silentIntervals: false,
-        showProgressMessages: true,
-      );
-      newFreeTimeSlots.add(freeSlot);
+    if (ranges.isEmpty) {
+      return [{'start': 0, 'end': 24 * 60}];
     }
 
-    if (newFreeTimeSlots.isNotEmpty) {
-      final updatedSlots = List<TimeSlot>.from(timeSlots)
-        ..addAll(newFreeTimeSlots);
-      final routineTimeSlots = updatedSlots
-          .map((slot) => _timeSlotToRoutineTimeSlot(slot))
-          .toList();
-      widget.onTimeSlotsChanged?.call(routineTimeSlots);
+    // Sort ranges by start time
+    ranges.sort((a, b) => a['start']!.compareTo(b['start']!));
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Added ${newFreeTimeSlots.length} Free Time slot${newFreeTimeSlots.length > 1 ? 's' : ''}!',
-          ),
-          backgroundColor: Colors.green,
-        ),
-      );
-    } else {
+    // Merge overlapping and adjacent ranges
+    List<Map<String, int>> merged = [];
+    for (var range in ranges) {
+      if (merged.isEmpty || merged.last['end']! < range['start']!) {
+        merged.add(range);
+      } else {
+        merged.last['end'] = math.max(merged.last['end']!, range['end']!);
+      }
+    }
+
+    // Find gaps between merged ranges
+    List<Map<String, int>> gaps = [];
+
+    // Gap at the beginning of the day
+    if (merged.first['start']! > 0) {
+      gaps.add({'start': 0, 'end': merged.first['start']!});
+    }
+
+    // Gaps between ranges
+    for (int i = 0; i < merged.length - 1; i++) {
+      final currentEnd = merged[i]['end']!;
+      final nextStart = merged[i + 1]['start']!;
+      if (nextStart > currentEnd) {
+        gaps.add({'start': currentEnd, 'end': nextStart});
+      }
+    }
+
+    // Gap at the end of the day
+    if (merged.last['end']! < 24 * 60) {
+      gaps.add({'start': merged.last['end']!, 'end': 24 * 60});
+    }
+
+    return gaps;
+  }
+
+  void _performFillFreeTime() {
+    // Always use widget data as the source of truth for the most current state
+    final widgetTimeSlots = widget.timeSlots.map(_routineTimeSlotToTimeSlot).toList();
+
+    // Remove any existing "Free Time" slots to get clean user data
+    final currentTimeSlots = widgetTimeSlots.where((slot) => slot.title != 'Free Time').toList();
+
+    // Find all gaps in the current schedule
+    final gaps = _findGaps(currentTimeSlots);
+
+    if (gaps.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(AppLocalizations.of(context)!.noFreeTimeGaps),
           backgroundColor: Colors.orange,
         ),
       );
+      return;
     }
+
+    List<TimeSlot> newFreeTimeSlots = [];
+
+    // Create free time slots for each gap
+    for (int i = 0; i < gaps.length; i++) {
+      final gap = gaps[i];
+      final startMinutes = gap['start']!;
+      final endMinutes = gap['end']!;
+
+      final startHour = startMinutes ~/ 60;
+      final startMinute = startMinutes % 60;
+      final endHour = (endMinutes - 1) ~/ 60; // -1 to handle 24:00 -> 23:59
+      final endMinute = (endMinutes - 1) % 60;
+
+      final freeSlot = TimeSlot(
+        id: (DateTime.now().millisecondsSinceEpoch + i).toString(),
+        startHour: startHour,
+        startMinute: startMinute,
+        endHour: endHour,
+        endMinute: endMinute,
+        title: 'Free Time',
+        description: 'Available free time',
+        color: const Color(0xFF9E9E9E),
+        notificationEnabled: false,
+        hasAlarm: false,
+        hasPreAlarm: false,
+        preAlarmMinutes: 15,
+        smartIntervalsEnabled: false,
+        smartIntervalMinutes: 0,
+        silentIntervals: false,
+        showProgressMessages: true,
+      );
+      newFreeTimeSlots.add(freeSlot);
+    }
+
+    final updatedSlots = List<TimeSlot>.from(currentTimeSlots)..addAll(newFreeTimeSlots);
+    final routineTimeSlots = updatedSlots.map((slot) => _timeSlotToRoutineTimeSlot(slot)).toList();
+    widget.onTimeSlotsChanged?.call(routineTimeSlots);
+
+    // Update internal state to match
+    setState(() {
+      timeSlots = updatedSlots;
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Added ${newFreeTimeSlots.length} Free Time slot${newFreeTimeSlots.length > 1 ? 's' : ''}!',
+        ),
+        backgroundColor: Colors.green,
+      ),
+    );
   }
 
   void _showCreateTimeSlotModal([TimeSlot? existingSlot]) {
@@ -2392,44 +2411,55 @@ class _SelectableClockWidgetState extends State<SelectableClockWidget>
           children: [
             // Fill the free time button (50% width)
             Expanded(
-              child: ElevatedButton(
-                onPressed: () {
-                  _fillFreeTime();
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  foregroundColor: Colors.amber[700],
-                  padding: EdgeInsets.symmetric(
-                    horizontal: (screenWidth * 0.015).clamp(4.0, 8.0),
-                    vertical: (screenHeight * 0.004).clamp(3.0, 6.0),
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(
-                      (screenWidth * 0.02).clamp(6.0, 10.0),
-                    ),
-                  ),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.auto_fix_high,
-                      size: (screenWidth * 0.03).clamp(10.0, 16.0),
-                    ),
-                    SizedBox(width: (screenWidth * 0.01).clamp(2.0, 6.0)),
-                    Flexible(
-                      child: Text(
-                        AppLocalizations.of(context)!.fillFreeTime,
-                        style: TextStyle(
-                          fontSize: (screenWidth * 0.025).clamp(9.0, 12.0),
-                          fontWeight: FontWeight.w600,
+              child: Builder(
+                builder: (context) {
+                  final buttonState = _getFillButtonState();
+                  final canFill = buttonState['canFill'] as bool;
+                  final buttonText = buttonState['buttonText'] as String;
+                  final hasGaps = buttonState['hasGaps'] as bool;
+
+                  return ElevatedButton(
+                    onPressed: canFill ? () {
+                      _fillFreeTime();
+                    } : null,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: canFill ? Colors.white : Colors.grey[300],
+                      foregroundColor: canFill ? Colors.amber[700] : Colors.grey[600],
+                      disabledBackgroundColor: Colors.grey[300],
+                      disabledForegroundColor: Colors.grey[600],
+                      padding: EdgeInsets.symmetric(
+                        horizontal: (screenWidth * 0.015).clamp(4.0, 8.0),
+                        vertical: (screenHeight * 0.004).clamp(3.0, 6.0),
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(
+                          (screenWidth * 0.02).clamp(6.0, 10.0),
                         ),
-                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                  ],
-                ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          hasGaps ? Icons.auto_fix_high : Icons.check_circle,
+                          size: (screenWidth * 0.03).clamp(10.0, 16.0),
+                        ),
+                        SizedBox(width: (screenWidth * 0.01).clamp(2.0, 6.0)),
+                        Flexible(
+                          child: Text(
+                            buttonText,
+                            style: TextStyle(
+                              fontSize: (screenWidth * 0.025).clamp(9.0, 12.0),
+                              fontWeight: FontWeight.w600,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
               ),
             ),
             SizedBox(width: (screenWidth * 0.015).clamp(4.0, 8.0)),

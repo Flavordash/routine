@@ -141,13 +141,25 @@ class AuthService {
             .collection('users')
             .doc(currentUser!.uid)
             .get();
-        
+
         if (doc.exists) {
           Map<String, dynamic>? data = doc.data() as Map<String, dynamic>?;
-          
-          // Note: Pro status should be managed through proper subscription validation
-          // Remove hardcoded email checks for security
-          
+
+          // Temporary PRO member email check for testing
+          // TODO: Replace with proper subscription validation before production
+          final proEmails = {
+            'kwanapps2025@gmail.com',
+            'back7930@gmail.com', // Your current test account
+          };
+
+          if (data != null && proEmails.contains(currentUser!.email)) {
+            data['isPro'] = true;
+            // Update Firestore to persist PRO status
+            await _firestore.collection('users').doc(currentUser!.uid).update({
+              'isPro': true,
+            });
+          }
+
           return data;
         }
       }
