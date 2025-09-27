@@ -242,6 +242,22 @@
   "@learnHowToUse": {
     "description": "Tutorial description"
   },
+  "contactSupport": "Contact Support",
+  "@contactSupport": {
+    "description": "Contact support menu item"
+  },
+  "getHelpAndAssistance": "Get help and assistance",
+  "@getHelpAndAssistance": {
+    "description": "Contact support description"
+  },
+  "privacyPolicy": "Privacy Policy",
+  "@privacyPolicy": {
+    "description": "Privacy policy menu item"
+  },
+  "viewPrivacyPolicy": "View our privacy policy",
+  "@viewPrivacyPolicy": {
+    "description": "Privacy policy description"
+  },
   "about": "About",
   "@about": {
     "description": "About section title"

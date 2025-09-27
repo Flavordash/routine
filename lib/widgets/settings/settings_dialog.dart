@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../l10n/app_localizations.dart';
 import '../../services/language_service.dart';
 import '../../services/notification_permission_service.dart';
@@ -192,6 +194,32 @@ class _SettingsDialogState extends State<SettingsDialog> {
                             _showTutorial();
                           },
                         ),
+                        ListTile(
+                          leading: Icon(
+                            Icons.email_outlined,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                          title: Text(l10n.contactSupport),
+                          subtitle: Text(l10n.getHelpAndAssistance),
+                          trailing: const Icon(
+                            Icons.arrow_forward_ios,
+                            size: 16,
+                          ),
+                          onTap: () => _launchEmail(),
+                        ),
+                        ListTile(
+                          leading: Icon(
+                            Icons.privacy_tip_outlined,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                          title: Text(l10n.privacyPolicy),
+                          subtitle: Text(l10n.viewPrivacyPolicy),
+                          trailing: const Icon(
+                            Icons.arrow_forward_ios,
+                            size: 16,
+                          ),
+                          onTap: () => _launchPrivacyPolicy(),
+                        ),
                       ],
                     ),
 
@@ -330,5 +358,70 @@ class _SettingsDialogState extends State<SettingsDialog> {
         return const TutorialDialog();
       },
     );
+  }
+
+  Future<void> _launchEmail() async {
+    const String email = 'kwanapps2025@gmail.com';
+
+    try {
+      await Clipboard.setData(const ClipboardData(text: email));
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Email copied to clipboard: $email'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 3),
+            action: SnackBarAction(
+              label: 'OK',
+              textColor: Colors.white,
+              onPressed: () {
+                ScaffoldMessenger.of(context).hideCurrentSnackBar();
+              },
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to copy email to clipboard'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _launchPrivacyPolicy() async {
+    final Uri privacyUri = Uri.parse('https://flavordash.github.io/routine24-privacy/');
+
+    try {
+      if (await canLaunchUrl(privacyUri)) {
+        await launchUrl(
+          privacyUri,
+          mode: LaunchMode.externalApplication,
+        );
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Could not open privacy policy in browser'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Error opening privacy policy'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 }

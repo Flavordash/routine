@@ -12,9 +12,9 @@ class SubscriptionService {
   final InAppPurchase _iap = InAppPurchase.instance;
   late StreamSubscription<List<PurchaseDetails>> _subscription;
   
-  // TODO: Replace with your actual product IDs from App Store Connect / Google Play Console
-  static const String _proSubscriptionId = 'routine_pro_monthly'; // Monthly subscription
-  static const String _proSubscriptionYearlyId = 'routine_pro_yearly'; // Yearly subscription
+  // Product IDs from App Store Connect
+  static const String _proSubscriptionId = 'routine24_pro_monthly'; // Monthly subscription
+  static const String _proSubscriptionYearlyId = 'routine24_pro_yearly'; // Yearly subscription
   
   static const Set<String> _productIds = {
     _proSubscriptionId,

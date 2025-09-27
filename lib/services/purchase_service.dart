@@ -4,8 +4,8 @@ import 'package:in_app_purchase/in_app_purchase.dart';
 import '../utils/logger.dart';
 
 class PurchaseService {
-  static const String kMonthlySubscriptionId = 'routine_monthly_sub';
-  static const String kYearlySubscriptionId = 'routine_yearly_sub';
+  static const String kMonthlySubscriptionId = 'routine24_pro_monthly';
+  static const String kYearlySubscriptionId = 'routine24_pro_yearly';
   
   static const List<String> _kProductIds = <String>[
     kMonthlySubscriptionId,

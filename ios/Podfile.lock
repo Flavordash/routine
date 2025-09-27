@@ -1431,6 +1431,8 @@ PODS:
   - shared_preferences_foundation (0.0.1):
     - Flutter
     - FlutterMacOS
+  - url_launcher_ios (0.0.1):
+    - Flutter
   - vibration (1.7.5):
     - Flutter
   - video_player_avfoundation (0.0.1):
@@ -1454,6 +1456,7 @@ DEPENDENCIES:
   - permission_handler_apple (from `.symlinks/plugins/permission_handler_apple/ios`)
   - rive_common (from `.symlinks/plugins/rive_common/ios`)
   - shared_preferences_foundation (from `.symlinks/plugins/shared_preferences_foundation/darwin`)
+  - url_launcher_ios (from `.symlinks/plugins/url_launcher_ios/ios`)
   - vibration (from `.symlinks/plugins/vibration/ios`)
   - video_player_avfoundation (from `.symlinks/plugins/video_player_avfoundation/darwin`)
   - webview_flutter_wkwebview (from `.symlinks/plugins/webview_flutter_wkwebview/darwin`)
@@ -1514,6 +1517,8 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/rive_common/ios"
   shared_preferences_foundation:
     :path: ".symlinks/plugins/shared_preferences_foundation/darwin"
+  url_launcher_ios:
+    :path: ".symlinks/plugins/url_launcher_ios/ios"
   vibration:
     :path: ".symlinks/plugins/vibration/ios"
   video_player_avfoundation:
@@ -1561,6 +1566,7 @@ SPEC CHECKSUMS:
   RecaptchaInterop: 11e0b637842dfb48308d242afc3f448062325aba
   rive_common: dd421daaf9ae69f0125aa761dd96abd278399952
   shared_preferences_foundation: 9e1978ff2562383bd5676f64ec4e9aa8fa06a6f7
+  url_launcher_ios: 694010445543906933d732453a59da0a173ae33d
   vibration: 8e2f50fc35bb736f9eecb7dd9f7047fbb6a6e888
   video_player_avfoundation: 2cef49524dd1f16c5300b9cd6efd9611ce03639b
   webview_flutter_wkwebview: 1821ceac936eba6f7984d89a9f3bcb4dea99ebb2

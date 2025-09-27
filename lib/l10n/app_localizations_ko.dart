@@ -183,6 +183,18 @@ class AppLocalizationsKo extends AppLocalizations {
   String get learnHowToUse => '앱 사용법 배우기';
 
   @override
+  String get contactSupport => 'Contact Support';
+
+  @override
+  String get getHelpAndAssistance => 'Get help and assistance';
+
+  @override
+  String get privacyPolicy => 'Privacy Policy';
+
+  @override
+  String get viewPrivacyPolicy => 'View our privacy policy';
+
+  @override
   String get about => '정보';
 
   @override

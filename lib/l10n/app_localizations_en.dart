@@ -185,6 +185,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get learnHowToUse => 'Learn how to use the app';
 
   @override
+  String get contactSupport => 'Contact Support';
+
+  @override
+  String get getHelpAndAssistance => 'Get help and assistance';
+
+  @override
+  String get privacyPolicy => 'Privacy Policy';
+
+  @override
+  String get viewPrivacyPolicy => 'View our privacy policy';
+
+  @override
   String get about => 'About';
 
   @override

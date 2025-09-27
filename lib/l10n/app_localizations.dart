@@ -438,6 +438,30 @@ abstract class AppLocalizations {
   /// **'Learn how to use the app'**
   String get learnHowToUse;
 
+  /// Contact support menu item
+  ///
+  /// In en, this message translates to:
+  /// **'Contact Support'**
+  String get contactSupport;
+
+  /// Contact support description
+  ///
+  /// In en, this message translates to:
+  /// **'Get help and assistance'**
+  String get getHelpAndAssistance;
+
+  /// Privacy policy menu item
+  ///
+  /// In en, this message translates to:
+  /// **'Privacy Policy'**
+  String get privacyPolicy;
+
+  /// Privacy policy description
+  ///
+  /// In en, this message translates to:
+  /// **'View our privacy policy'**
+  String get viewPrivacyPolicy;
+
   /// About section title
   ///
   /// In en, this message translates to:

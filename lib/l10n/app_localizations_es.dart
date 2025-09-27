@@ -185,6 +185,18 @@ class AppLocalizationsEs extends AppLocalizations {
   String get learnHowToUse => 'Aprende cómo usar la aplicación';
 
   @override
+  String get contactSupport => 'Contact Support';
+
+  @override
+  String get getHelpAndAssistance => 'Get help and assistance';
+
+  @override
+  String get privacyPolicy => 'Privacy Policy';
+
+  @override
+  String get viewPrivacyPolicy => 'View our privacy policy';
+
+  @override
   String get about => 'Acerca de';
 
   @override

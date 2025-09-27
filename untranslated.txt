@@ -1,5 +1,9 @@
 {
   "es": [
+    "contactSupport",
+    "getHelpAndAssistance",
+    "privacyPolicy",
+    "viewPrivacyPolicy",
     "colorSettings",
     "shareAsTemplate",
     "daySettings",
@@ -26,6 +30,10 @@
   ],
 
   "ko": [
+    "contactSupport",
+    "getHelpAndAssistance",
+    "privacyPolicy",
+    "viewPrivacyPolicy",
     "colorSettings",
     "shareAsTemplate",
     "daySettings",
@@ -52,6 +60,10 @@
   ],
 
   "zh": [
+    "contactSupport",
+    "getHelpAndAssistance",
+    "privacyPolicy",
+    "viewPrivacyPolicy",
     "colorSettings",
     "shareAsTemplate",
     "daySettings",
