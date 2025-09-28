@@ -3,8 +3,9 @@
 A visual time management iOS app featuring an innovative 24-hour circular interface for building daily routines.
 
 [![App Store](https://img.shields.io/badge/Download_on_the-App_Store-black?style=for-the-badge&logo=apple&logoColor=white)](https://apps.apple.com/app/routine24)
-[![Platform](https://img.shields.io/badge/Platform-iOS_14.0+-blue?style=for-the-badge&logo=ios)](#)
-[![Swift](https://img.shields.io/badge/Swift-5.0-orange?style=for-the-badge&logo=swift)](#)
+[![Flutter](https://img.shields.io/badge/Flutter-02569B?style=for-the-badge&logo=flutter&logoColor=white)](#)
+[![Dart](https://img.shields.io/badge/Dart-0175C2?style=for-the-badge&logo=dart&logoColor=white)](#)
+[![Platform](https://img.shields.io/badge/Platform-Cross_Platform-green?style=for-the-badge)](#)
 
 ## Overview
 
