@@ -298,7 +298,7 @@ cab6a33 - latest update
 
 - **Developer:** Flavordash (GitHub: @Flavordash)
 - **Support Email:** kwanapps2025@gmail.com
-- **Privacy Policy:** [View Documentation](https://github.com/Flavordash/routine-privacy)
+- **Privacy Policy:** [View Documentation](https://flavordash.github.io/routine24-privacy/)
 - **Issues & Bug Reports:** [GitHub Issues](https://github.com/Flavordash/routine/issues)
 
 ## Contributing
