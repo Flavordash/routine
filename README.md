@@ -10,12 +10,12 @@ A visual time management iOS app featuring an innovative 24-hour circular interf
 
 Routine 24 revolutionizes daily planning with its unique circular time visualization. Unlike traditional linear schedulers, the app presents your entire day as an intuitive 24-hour circle, making it easier to understand time flow and build sustainable routines.
 
-<img width="1242" height="2688" alt="1" src="https://github.com/user-attachments/assets/ccbbd424-db2c-49a4-a615-366e5797a0bc" />
-<img width="1242" height="2688" alt="2" src="https://github.com/user-attachments/assets/315675af-6d3c-4fea-b00c-9dc8f5332e12" />
-<img width="1242" height="2688" alt="3" src="https://github.com/user-attachments/assets/454d3c2e-7563-4c51-b0d7-69f6db5ec21b" />
-<img width="1242" height="2688" alt="4" src="https://github.com/user-attachments/assets/e7969fd1-755c-4681-8123-a1798b0e13f1" />
-<img width="1242" height="2688" alt="5" src="https://github.com/user-attachments/assets/83e0824f-dfa9-4834-a0f5-08d59fd2519e" />
-<img width="1242" height="2688" alt="6" src="https://github.com/user-attachments/assets/b0226b30-f9e6-482f-a181-581b3602e409" />
+<img width="250" alt="1" src="https://github.com/user-attachments/assets/ccbbd424-db2c-49a4-a615-366e5797a0bc" />
+<img width="250" alt="2" src="https://github.com/user-attachments/assets/315675af-6d3c-4fea-b00c-9dc8f5332e12" />
+<img width="250" alt="3" src="https://github.com/user-attachments/assets/454d3c2e-7563-4c51-b0d7-69f6db5ec21b" />
+<img width="250" alt="4" src="https://github.com/user-attachments/assets/e7969fd1-755c-4681-8123-a1798b0e13f1" />
+<img width="250" alt="5" src="https://github.com/user-attachments/assets/83e0824f-dfa9-4834-a0f5-08d59fd2519e" />
+<img width="250" alt="6" src="https://github.com/user-attachments/assets/b0226b30-f9e6-482f-a181-581b3602e409" />
 
 **"Circle Your Time"** - See your perfect day take shape.
 
